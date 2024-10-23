@@ -84,7 +84,7 @@ public class CharacterController : MonoBehaviour
     void OrientCharacter(Vector3 target)
     {
         Vector3 direction = (target - character.transform.position).normalized;
-        Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        Quaternion lookRotation = Quaternion.LookRotation(direction); // Utiliser la direction complète
         character.transform.rotation = Quaternion.Slerp(character.transform.rotation, lookRotation, Time.deltaTime * 5f);
     }
 
