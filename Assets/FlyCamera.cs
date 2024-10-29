@@ -32,6 +32,7 @@ public class FlyCamera : MonoBehaviour
     private Vector2 cameraRotation;
 
     private bool IsInRotMode = false;
+    private bool IsInMoveMode = true;
 
     // Use this for initialization
     private void Start()
@@ -47,12 +48,18 @@ public class FlyCamera : MonoBehaviour
             IsInRotMode = !IsInRotMode;
             Debug.Log(IsInRotMode ? "CRotation activé" : "CRotation désactivé");
         }
+
+        if (Input.GetKeyDown(KeyCode.F2))
+        {
+            IsInMoveMode = !IsInMoveMode;
+            Debug.Log(IsInMoveMode ? "CMove activé" : "CMove désactivé");
+        }
     }
 
     // LateUpdate is called every frame, if the Behaviour is enabled
     private void LateUpdate()
     {
-        if (!IsInRotMode)
+        if (!IsInRotMode && IsInMoveMode)
         {
             cameraRotation.x += Input.GetAxis("Mouse X") * sensitivity * Time.deltaTime;
             cameraRotation.y += Input.GetAxis("Mouse Y") * sensitivity * Time.deltaTime;

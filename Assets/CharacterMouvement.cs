@@ -27,7 +27,13 @@ public class CharacterController : MonoBehaviour
 
     void Update()
     {
+        HandleControlModeToggle();
+        HandleCameraSwitch();
+        HandleMovement();
+    }
 
+    void HandleControlModeToggle()
+    {
         // Basculer le mode de contrôle avec F2
         if (Input.GetKeyDown(KeyCode.F2))
         {
@@ -41,18 +47,30 @@ public class CharacterController : MonoBehaviour
             isControlMode = false;
             character.SetActive(false);
         }
+    }
 
+    void HandleCameraSwitch()
+    {
         // Basculer entre les caméras à la première et à la troisième personne avec Left Control
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             isFirstPerson = !isFirstPerson;
             StartCoroutine(SwitchCamera(isFirstPerson));
         }
+    }
 
+    void HandleMovement()
+    {
         // Déplacer le personnage avec un clic gauche de la souris lorsque le mode de contrôle est actif
         if (Input.GetMouseButtonDown(0))
         {
-            Ray ray = thirdPersonCamera.ScreenPointToRay(Input.mousePosition);
+            //S'adapte en fonction de si la camera est TPS ou FPS
+            Ray ray;
+            if (thirdPersonCamera.enabled)
+            {
+                ray = thirdPersonCamera.ScreenPointToRay(Input.mousePosition);
+            }
+            else { ray = firstPersonCamera.ScreenPointToRay(Input.mousePosition); }
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer))
             {
                 if (hit.collider.CompareTag("Terrain"))
@@ -68,13 +86,7 @@ public class CharacterController : MonoBehaviour
             }
         }
 
-        if (isControlMode)
-        {
-            MoveCharacter();
-        }
-
-        // Déplacer le personnage vers la destination
-        if (isMoving)
+        if (isControlMode || isMoving)
         {
             MoveCharacter();
         }
@@ -86,6 +98,7 @@ public class CharacterController : MonoBehaviour
         Vector3 direction = (target - character.transform.position).normalized;
         Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
         character.transform.rotation = Quaternion.Slerp(character.transform.rotation, lookRotation, Time.deltaTime * 5f);
+        Debug.Log("Orienting character towards target at: " + target);
     }
 
     // Déplacer le personnage vers la destination

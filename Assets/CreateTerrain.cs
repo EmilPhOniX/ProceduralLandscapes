@@ -19,7 +19,25 @@ public class Terrain : MonoBehaviour
     private MeshRenderer p_meshRenderer;
     public GameObject capsulePrefab;
 
+    public int vitesse = 0;
+    private int angle = 0;
     private bool IsInRotMode = false;
+    private bool IsCharacterActive = false;
+
+
+    // Méthode appelée au démarrage
+    void Start()
+    {
+        // Créer le terrain
+        CreerTerrain();
+    }
+
+    // Méthode appelée à chaque frame
+    void Update()
+    {
+        HandleTerrainRotation();
+        HandleCharacterSpawn();
+    }
 
     // Méthode pour créer le terrain
     void CreerTerrain()
@@ -86,20 +104,7 @@ public class Terrain : MonoBehaviour
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
     }
 
-    public int vitesse = 0;
-    private int angle = 0;
-
-    // Méthode appelée au démarrage
-    void Start()
-    {
-        // Désactiver le prefab capsule au démarrage
-        capsulePrefab.gameObject.SetActive(false);
-        // Créer le terrain
-        CreerTerrain();
-    }
-
-    // Méthode appelée à chaque frame
-    void Update()
+    void HandleTerrainRotation()
     {
         // Rotation de l'objet si la touche RightControl est enfoncée
         if (Input.GetKeyDown(KeyCode.RightControl))
@@ -122,11 +127,15 @@ public class Terrain : MonoBehaviour
                 transform.rotation = Quaternion.Euler(0, angle, 0);
             }
         }
+    }
 
+    void HandleCharacterSpawn()
+    {
         // Activer le prefab capsule si la touche F2 est enfoncée
-        if (Input.GetKey(KeyCode.F2))
+        if (Input.GetKeyDown(KeyCode.F2))
         {
-            capsulePrefab.gameObject.SetActive(true);
+            IsCharacterActive = !IsCharacterActive;
+            capsulePrefab.gameObject.SetActive(IsCharacterActive);
         }
     }
 }
