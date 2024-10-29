@@ -19,6 +19,8 @@ public class Terrain : MonoBehaviour
     private MeshRenderer p_meshRenderer;
     public GameObject capsulePrefab;
 
+    private bool IsInRotMode = false;
+
     // Méthode pour créer le terrain
     void CreerTerrain()
     {
@@ -99,18 +101,26 @@ public class Terrain : MonoBehaviour
     // Méthode appelée à chaque frame
     void Update()
     {
-        // Appeler LateUpdate
-        LateUpdate();
-    }
-
-    // Méthode appelée après Update
-    private void LateUpdate()
-    {
         // Rotation de l'objet si la touche RightControl est enfoncée
-        if (Input.GetKey(KeyCode.RightControl))
+        if (Input.GetKeyDown(KeyCode.RightControl))
         {
-            angle += vitesse;
-            transform.rotation = Quaternion.Euler(0, angle, 0);
+            IsInRotMode = !IsInRotMode;
+            Debug.Log(IsInRotMode ? "Rotation activé" : "Rotation désactivé");
+        }
+
+        if (IsInRotMode)
+        {
+            if (Input.GetKey(KeyCode.A)) //A correspond a Q en AZERTY
+            {
+                angle -= vitesse; // Rotation dans le sens inverse
+                transform.rotation = Quaternion.Euler(0, angle, 0);
+            }
+
+            if (Input.GetKey(KeyCode.D))
+            {
+                angle += vitesse; // Rotation dans le sens horaire
+                transform.rotation = Quaternion.Euler(0, angle, 0);
+            }
         }
 
         // Activer le prefab capsule si la touche F2 est enfoncée
