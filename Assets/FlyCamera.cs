@@ -52,7 +52,7 @@ public class FlyCamera : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F2))
         {
             IsInMoveMode = !IsInMoveMode;
-            Debug.Log(IsInMoveMode ? "CMove activé" : "CMove désactivé");
+            Debug.Log(IsInMoveMode ? "CMove désactivé" : "CMove activé");
         }
     }
 
