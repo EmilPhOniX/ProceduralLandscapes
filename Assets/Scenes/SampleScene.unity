@@ -202,6 +202,8 @@ MonoBehaviour:
   resolution: 15
   capsulePrefab: {fileID: 1318749207}
   vitesse: 1
+  radius: 2
+  deformationStrength: 2
 --- !u!4 &10853084
 Transform:
   m_ObjectHideFlags: 0
