@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using UnityEngine;
 
 public class Terrain : MonoBehaviour
@@ -32,9 +30,11 @@ public class Terrain : MonoBehaviour
     public float deformationStrength = 2f;
 
     public AnimationCurve attenuationCurve;
-    private Mesh mesh;
     private Vector3[] vertices, modifiedVerts;
 
+    //pattern
+    public List<AnimationCurve> patterns; // Liste des patterns
+    private int patternIndex = 0; // Indice du pattern actuel
 
     // Méthode appelée au démarrage
     void Start()
@@ -42,9 +42,9 @@ public class Terrain : MonoBehaviour
         // Créer le terrain
         CreerTerrain();
 
-        mesh = GetComponentInChildren<MeshFilter>().mesh;
-        vertices = mesh.vertices;
-        modifiedVerts = mesh.vertices;
+        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
+        vertices = p_mesh.vertices;
+        modifiedVerts = p_mesh.vertices;
     }
 
     // Méthode appelée à chaque frame
@@ -52,40 +52,71 @@ public class Terrain : MonoBehaviour
     {
         HandleTerrainRotation();
         HandleCharacterSpawn();
+        HandleDeformation();
+        HandleDeformationIntensity();
+        HandlePatternRadius();
+        HandlePatternSwitch();
+    }
 
+    void HandleDeformation()
+    {
         RaycastHit hit;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
         if (Physics.Raycast(ray, out hit, Mathf.Infinity))
         {
+            Vector3 hitPoint = hit.point;
+
+            int closestVertexIndex = FindClosestVertex(hitPoint);
+
+            // Appliquer le pattern aux vertices dans le rayon
             for (int v = 0; v < modifiedVerts.Length; v++)
             {
-                Vector3 distance = modifiedVerts[v] - hit.point;
+                Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
 
-                float smoothingFactor = 2f;
-                float force = deformationStrength / (1f + hit.point.sqrMagnitude);
-
-                if (distance.sqrMagnitude < radius)
+                // Vérifier que le vertex est dans le rayon du pattern
+                if (distance.sqrMagnitude < radius * radius)
                 {
-                    if (Input.GetMouseButtonDown(0))
+                    float normalizedDistance = distance.magnitude / radius;
+                    float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
+
+                    if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
                     {
-                        modifiedVerts[v] = modifiedVerts[v] + (Vector3.up * force) / smoothingFactor;
+                        modifiedVerts[v] += Vector3.down * force;
+
                     }
-                    else if (Input.GetMouseButtonDown(1))
+                    else if (Input.GetMouseButtonDown(0))
                     {
-                        modifiedVerts[v] = modifiedVerts[v] + (Vector3.down * force) / smoothingFactor;
+                        modifiedVerts[v] += Vector3.up * force;
                     }
                 }
             }
+            RecalculateMesh();
         }
-        RecalculateMesh();
+    }
+
+    int FindClosestVertex(Vector3 point)
+    {
+        int closestIndex = 0;
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < modifiedVerts.Length; i++)
+        {
+            float distance = (modifiedVerts[i] - point).sqrMagnitude;
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
     }
 
     void RecalculateMesh()
     {
-        mesh.vertices = modifiedVerts;
-        GetComponentInChildren<MeshCollider>().sharedMesh = mesh;
-        mesh.RecalculateNormals();
+        p_mesh.vertices = modifiedVerts;
+        GetComponentInChildren<MeshCollider>().sharedMesh = p_mesh;
+        p_mesh.RecalculateNormals();
     }
 
     // Méthode pour créer le terrain
@@ -185,6 +216,41 @@ public class Terrain : MonoBehaviour
         {
             IsCharacterActive = !IsCharacterActive;
             capsulePrefab.gameObject.SetActive(IsCharacterActive);
+        }
+    }
+
+    void HandleDeformationIntensity()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftAlt))
+        {
+            deformationStrength = Mathf.Min(deformationStrength + 0.1f, 5f);
+        }
+
+        else if (Input.GetKeyDown(KeyCode.RightAlt))
+        {
+            deformationStrength = Mathf.Max(deformationStrength - 0.1f, 0.5f);
+        }
+    }
+
+    void HandlePatternRadius()
+    {
+        if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.Plus)) // Augmente le rayon
+        {
+            radius = Mathf.Min(radius + 0.5f, 5f); // Limite max
+        }
+        else if (Input.GetKeyDown(KeyCode.Minus)) // Diminue le rayon
+        {
+            radius = Mathf.Max(radius - 0.5f, 1.5f); // Limite min
+        }
+    }
+
+    void HandlePatternSwitch()
+    {
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            patternIndex = (patternIndex + 1) % patterns.Count;
+            attenuationCurve = patterns[patternIndex]; // Applique le nouveau pattern
+            Debug.Log("Pattern changé: " + patternIndex);
         }
     }
 }
