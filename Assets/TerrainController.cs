@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Terrain : MonoBehaviour
+public class TerrainController : MonoBehaviour
 {
     // Déclaration des variables de la classe
     private Mesh p_mesh;

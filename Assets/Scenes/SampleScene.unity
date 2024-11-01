@@ -198,8 +198,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   CentrerPivot: 1
-  dimension: 15
-  resolution: 100
+  dimension: 100
+  resolution: 300
   capsulePrefab: {fileID: 1318749207}
   vitesse: 1
   radius: 2
