@@ -13,33 +13,27 @@ public class Terrain : MonoBehaviour
     public bool CentrerPivot;
     public int dimension;
     public int resolution;
-
     private MeshRenderer p_meshRenderer;
     public GameObject capsulePrefab;
-
     public int vitesse = 0;
     private int angle = 0;
     private bool IsInRotMode = false;
     private bool IsCharacterActive = false;
-
-    //Deformation usage
     [Range(1.5f, 5f)]
     public float radius = 2f;
-
     [Range(0.5f, 5f)]
     public float deformationStrength = 2f;
-
     public AnimationCurve attenuationCurve;
     private Vector3[] vertices, modifiedVerts;
-
-    //pattern
     public List<AnimationCurve> patterns; // Liste des patterns
     private int patternIndex = 0; // Indice du pattern actuel
+
+    enum DistanceType { Euclidean, Manhattan, Chebyshev }
+    private DistanceType currentDistanceType = DistanceType.Euclidean;
 
     // Méthode appelée au démarrage
     void Start()
     {
-        // Créer le terrain
         CreerTerrain();
 
         p_mesh = GetComponentInChildren<MeshFilter>().mesh;
@@ -58,68 +52,8 @@ public class Terrain : MonoBehaviour
         HandlePatternSwitch();
     }
 
-    void HandleDeformation()
-    {
-        RaycastHit hit;
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    // ---Fonctions de gestion du terrain---
 
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity))
-        {
-            Vector3 hitPoint = hit.point;
-
-            int closestVertexIndex = FindClosestVertex(hitPoint);
-
-            // Appliquer le pattern aux vertices dans le rayon
-            for (int v = 0; v < modifiedVerts.Length; v++)
-            {
-                Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
-
-                // Vérifier que le vertex est dans le rayon du pattern
-                if (distance.sqrMagnitude < radius * radius)
-                {
-                    float normalizedDistance = distance.magnitude / radius;
-                    float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
-
-                    if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
-                    {
-                        modifiedVerts[v] += Vector3.down * force;
-
-                    }
-                    else if (Input.GetMouseButtonDown(0))
-                    {
-                        modifiedVerts[v] += Vector3.up * force;
-                    }
-                }
-            }
-            RecalculateMesh();
-        }
-    }
-
-    int FindClosestVertex(Vector3 point)
-    {
-        int closestIndex = 0;
-        float closestDistance = float.MaxValue;
-
-        for (int i = 0; i < modifiedVerts.Length; i++)
-        {
-            float distance = (modifiedVerts[i] - point).sqrMagnitude;
-            if (distance < closestDistance)
-            {
-                closestDistance = distance;
-                closestIndex = i;
-            }
-        }
-        return closestIndex;
-    }
-
-    void RecalculateMesh()
-    {
-        p_mesh.vertices = modifiedVerts;
-        GetComponentInChildren<MeshCollider>().sharedMesh = p_mesh;
-        p_mesh.RecalculateNormals();
-    }
-
-    // Méthode pour créer le terrain
     void CreerTerrain()
     {
         // Initialisation du mesh
@@ -219,14 +153,77 @@ public class Terrain : MonoBehaviour
         }
     }
 
+    void HandleDeformation()
+    {
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            // Change le type de distance
+            currentDistanceType = (DistanceType)(((int)currentDistanceType + 1) % 3);
+            Debug.Log("Distance type changé: " + currentDistanceType);
+        }
+
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity))
+        {
+            Vector3 hitPoint = hit.point;
+
+            // Obtenir les indices des vertices du triangle sélectionné
+            int triangleIndex = hit.triangleIndex;
+            int[] triangles = p_mesh.triangles;
+            List<int> triangleVertices = new List<int>
+            {
+                triangles[triangleIndex * 3],
+                triangles[triangleIndex * 3 + 1],
+                triangles[triangleIndex * 3 + 2]
+            };
+
+            // Trouver le vertex le plus proche
+            int closestVertexIndex = triangleVertices[0];
+            float minDistance = CalculateDistance(modifiedVerts[closestVertexIndex], hitPoint);
+
+            foreach (int vertexIndex in triangleVertices)
+            {
+                float distance = CalculateDistance(modifiedVerts[vertexIndex], hitPoint);
+                if (distance < minDistance)
+                {
+                    closestVertexIndex = vertexIndex;
+                    minDistance = distance;
+                }
+            }
+
+            // Appliquer la déformation aux vertices voisins dans le rayon du pattern
+            for (int v = 0; v < modifiedVerts.Length; v++)
+            {
+                Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
+                if (distance.sqrMagnitude < radius * radius)
+                {
+                    float normalizedDistance = distance.magnitude / radius;
+                    float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
+
+                    if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
+                    {
+                        modifiedVerts[v] += Vector3.down * force;
+                    }
+                    else if (Input.GetMouseButtonDown(0))
+                    {
+                        modifiedVerts[v] += Vector3.up * force;
+                    }
+                }
+            }
+            RecalculateMesh();
+        }
+    }
+
     void HandleDeformationIntensity()
     {
-        if (Input.GetKeyDown(KeyCode.LeftAlt))
+        if (Input.GetKeyDown(KeyCode.RightAlt))
         {
             deformationStrength = Mathf.Min(deformationStrength + 0.1f, 5f);
         }
 
-        else if (Input.GetKeyDown(KeyCode.RightAlt))
+        else if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
             deformationStrength = Mathf.Max(deformationStrength - 0.1f, 0.5f);
         }
@@ -251,6 +248,47 @@ public class Terrain : MonoBehaviour
             patternIndex = (patternIndex + 1) % patterns.Count;
             attenuationCurve = patterns[patternIndex]; // Applique le nouveau pattern
             Debug.Log("Pattern changé: " + patternIndex);
+        }
+    }
+
+    // ---Fonctions utilitaires---
+
+    int FindClosestVertex(Vector3 point)
+    {
+        int closestIndex = 0;
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < modifiedVerts.Length; i++)
+        {
+            float distance = (modifiedVerts[i] - point).sqrMagnitude;
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
+    }
+
+    void RecalculateMesh()
+    {
+        p_mesh.vertices = modifiedVerts;
+        GetComponentInChildren<MeshCollider>().sharedMesh = p_mesh;
+        p_mesh.RecalculateNormals();
+    }
+
+    float CalculateDistance(Vector3 pointA, Vector3 pointB)
+    {
+        switch (currentDistanceType)
+        {
+            case DistanceType.Euclidean:
+                return Vector3.Distance(pointA, pointB);
+            case DistanceType.Manhattan:
+                return Mathf.Abs(pointA.x - pointB.x) + Mathf.Abs(pointA.y - pointB.y) + Mathf.Abs(pointA.z - pointB.z);
+            case DistanceType.Chebyshev:
+                return Mathf.Max(Mathf.Abs(pointA.x - pointB.x), Mathf.Abs(pointA.y - pointB.y), Mathf.Abs(pointA.z - pointB.z));
+            default:
+                return Vector3.Distance(pointA, pointB);
         }
     }
 }
