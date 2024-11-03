@@ -2,8 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class Terrain : MonoBehaviour
+public class CustomTerrain : MonoBehaviour
 {
     // Déclaration des variables de la classe
     private Mesh p_mesh;
@@ -16,8 +17,16 @@ public class Terrain : MonoBehaviour
     public int dimension;
     public int resolution;
 
+    // Variables pour la gestion de l'interface utilisateur (UI)
+    public GameObject settingsCanvas;  // Interface pour le menu des paramètres
+    public InputField dimensionInput;  // Champ de saisie pour la dimension
+    public InputField resolutionInput; // Champ de saisie pour la résolution
+
     private MeshRenderer p_meshRenderer;
     public GameObject capsulePrefab;
+
+    public int vitesse = 0;
+    private int angle = 0;
 
     // Méthode pour créer le terrain
     void CreerTerrain()
@@ -84,8 +93,6 @@ public class Terrain : MonoBehaviour
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
     }
 
-    public int vitesse = 0;
-    private int angle = 0;
 
     // Méthode appelée au démarrage
     void Start()
@@ -94,6 +101,7 @@ public class Terrain : MonoBehaviour
         capsulePrefab.gameObject.SetActive(false);
         // Créer le terrain
         CreerTerrain();
+        settingsCanvas.SetActive(false);
     }
 
     // Méthode appelée à chaque frame
@@ -117,6 +125,33 @@ public class Terrain : MonoBehaviour
         if (Input.GetKey(KeyCode.F2))
         {
             capsulePrefab.gameObject.SetActive(true);
+        }
+
+        // Ouvrir/fermer le menu des paramètres avec F10
+        if (Input.GetKeyDown(KeyCode.F10))
+        {
+            settingsCanvas.SetActive(true); 
+        }
+
+        // Appliquer les paramètres et recréer le terrain quand Enter est pressé
+        if (Input.GetKeyDown(KeyCode.Return) && settingsCanvas.activeSelf)
+        {
+            ApplySettings();
+        }
+    }
+
+    public void ApplySettings()
+    {
+        if (int.TryParse(dimensionInput.text, out int newDimension) && int.TryParse(resolutionInput.text, out int newResolution))
+        {
+            dimension = newDimension;
+            resolution = newResolution;
+            CreerTerrain();  // Recréer le terrain avec les nouvelles valeurs
+            settingsCanvas.SetActive(false);  // Fermer le menu des paramètres
+        }
+        else
+        {
+            Debug.LogWarning("Entrée invalide pour la dimension ou la résolution.");
         }
     }
 }
