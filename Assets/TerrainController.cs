@@ -19,9 +19,9 @@ public class TerrainTerrainController : MonoBehaviour
     private int angle = 0;
     private bool IsInRotMode = false;
     private bool IsCharacterActive = false;
-    [Range(1.5f, 5f)]
+    [Range(1.5f, 50f)]
     public float radius = 2f;
-    [Range(0.5f, 5f)]
+    [Range(0.5f, 50f)]
     public float deformationStrength = 2f;
     public AnimationCurve attenuationCurve;
     private Vector3[] vertices, modifiedVerts;
