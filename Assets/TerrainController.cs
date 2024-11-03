@@ -23,11 +23,10 @@ public class TerrainController : MonoBehaviour
     private bool IsCharacterActive = false;
 
     //Deformation usage
-    [Range(1.5f, 5f)]
-    public float radius = 2f;
-
-    [Range(0.5f, 5f)]
-    public float deformationStrength = 2f;
+    [Range(1.5f, 50f)]
+    public float radius = 25f;
+    [Range(0.5f, 50f)]
+    public float deformationStrength = 50f;
 
     public AnimationCurve attenuationCurve;
     private Vector3[] vertices, modifiedVerts;
