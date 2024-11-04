@@ -34,9 +34,9 @@ public class TerrainController : MonoBehaviour
     public InputField resolutionInput; // Champ de saisie pour la résolution
 
     //Deformation usage
-    [Range(1.5f, 50f)]
+    [Range(1f, 50f)]
     public float radius = 25f;
-    [Range(0.5f, 50f)]
+    [Range(1f, 50f)]
     public float deformationStrength = 50f;
 
     public AnimationCurve attenuationCurve;
@@ -309,14 +309,14 @@ public class TerrainController : MonoBehaviour
 
     void HandleDeformationIntensity()
     {
-        if (Input.GetKeyDown(KeyCode.LeftAlt))
+        if (Input.GetKeyDown(KeyCode.RightAlt))
         {
-            deformationStrength = Mathf.Min(deformationStrength + 0.1f, 5f);
+            deformationStrength = Mathf.Min(deformationStrength + 1f, 50f);
         }
 
-        else if (Input.GetKeyDown(KeyCode.RightAlt))
+        else if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
-            deformationStrength = Mathf.Max(deformationStrength - 0.1f, 0.5f);
+            deformationStrength = Mathf.Max(deformationStrength - 1f, 1f);
         }
     }
 
@@ -324,11 +324,11 @@ public class TerrainController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.Plus)) // Augmente le rayon
         {
-            radius = Mathf.Min(radius + 0.5f, 5f); // Limite max
+            radius = Mathf.Min(radius + 1f, 50f); // Limite max
         }
         else if (Input.GetKeyDown(KeyCode.Minus)) // Diminue le rayon
         {
-            radius = Mathf.Max(radius - 0.5f, 1.5f); // Limite min
+            radius = Mathf.Max(radius - 1f, 1f); // Limite min
         }
     }
 
