@@ -198,10 +198,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   CentrerPivot: 1
-  dimension: 100
-  resolution: 300
+  dimension: 160
+  resolution: 8
   capsulePrefab: {fileID: 1318749207}
   vitesse: 1
+  settingsCanvas: {fileID: 1160026758}
+  dimensionInput: {fileID: 1151535107}
+  resolutionInput: {fileID: 1907649670}
   radius: 2
   deformationStrength: 2
   attenuationCurve:
@@ -298,6 +301,12 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  brushTextures:
+  - {fileID: 2800000, guid: 4428751f103c63946a1e8698033aeeb0, type: 3}
+  - {fileID: 2800000, guid: d36f3ebf6eb0446428d42c52c3e489ea, type: 3}
+  - {fileID: 2800000, guid: 5401f847023cea84c9813705b9ec09eb, type: 3}
+  - {fileID: 2800000, guid: 4ec965901b064db4a9d7e41b6cb9a9bd, type: 3}
+  - {fileID: 2800000, guid: 07e08d905a0341846bdec8de4d30fa7d, type: 3}
 --- !u!4 &10853084
 Transform:
   m_ObjectHideFlags: 0
@@ -313,11 +322,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 454.80005, y: 346.8}
-  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!33 &10853085
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -1419,7 +1423,8 @@ MonoBehaviour:
   character: {fileID: 1318749207}
   thirdPersonCamera: {fileID: 318756638}
   firstPersonCamera: {fileID: 604022977}
-  moveSpeed: 5
+  baseMoveSpeed: 5
+  sprintSpeedMultiplier: 1.5
   transitionDuration: 0.5
   terrainLayer:
     serializedVersion: 2

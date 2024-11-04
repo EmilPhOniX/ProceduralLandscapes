@@ -46,6 +46,12 @@ public class TerrainController : MonoBehaviour
     public List<AnimationCurve> patterns; // Liste des patterns
     private int patternIndex = 0; // Indice du pattern actuel
 
+    //brush
+    public List<Texture2D> brushTextures; // Liste des textures utilisées comme brushes
+    private int brushIndex = 0; // Indice du brush actuellement sélectionné
+    private bool useBrushMode = false; // Booléen pour indiquer le mode de déformation (false pour pattern, true pour brush)
+
+
     // Méthode appelée au démarrage
     void Start()
     {
@@ -65,7 +71,8 @@ public class TerrainController : MonoBehaviour
         HandlePatternRadius();
         HandlePatternSwitch();
         ActivationCanvas();
-
+        HandleBrushSwitch();
+        ToggleDeformationMode();
     }
 
     void HandleDeformation()
@@ -76,24 +83,72 @@ public class TerrainController : MonoBehaviour
         if (Physics.Raycast(ray, out hit, Mathf.Infinity))
         {
             Vector3 hitPoint = hit.point;
-
             int closestVertexIndex = FindClosestVertex(hitPoint);
 
-            // Appliquer le pattern aux vertices dans le rayon
-            for (int v = 0; v < modifiedVerts.Length; v++)
+            // Applique la déformation selon le mode sélectionné
+            if (useBrushMode)
             {
-                Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
+                ApplyBrushDeformation(closestVertexIndex); // Déformation avec brush
+            }
+            else
+            {
+                ApplyPatternDeformation(closestVertexIndex); // Déformation avec pattern
+            }
+            RecalculateMesh(); // Recalcule le mesh pour appliquer la déformation
+        }
+    }
 
-                // Vérifier que le vertex est dans le rayon du pattern
-                if (distance.sqrMagnitude < radius * radius)
+    void ApplyPatternDeformation(int closestVertexIndex)
+    {
+        for (int v = 0; v < modifiedVerts.Length; v++)
+        {
+            Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
+
+            // Vérifie que le vertex est dans le rayon du pattern
+            if (distance.sqrMagnitude < radius * radius)
+            {
+                float normalizedDistance = distance.magnitude / radius;
+                float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
+
+                // Applique la déformation en fonction de la touche de la souris et du contrôle
+                if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
                 {
-                    float normalizedDistance = distance.magnitude / radius;
-                    float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
+                    modifiedVerts[v] += Vector3.down * force;
+                }
+                else if (Input.GetMouseButtonDown(0))
+                {
+                    modifiedVerts[v] += Vector3.up * force;
+                }
+            }
+        }
+    }
+
+    void ApplyBrushDeformation(int closestVertexIndex)
+    {
+        Texture2D currentBrush = brushTextures[brushIndex];
+        int brushSize = currentBrush.width;
+
+        for (int v = 0; v < modifiedVerts.Length; v++)
+        {
+            Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
+
+            if (distance.sqrMagnitude < radius * radius)
+            {
+                float normalizedDistance = distance.magnitude / radius;
+
+                // Calcul des coordonnées dans la texture
+                int pixelX = Mathf.FloorToInt((distance.x / radius + 0.5f) * brushSize);
+                int pixelY = Mathf.FloorToInt((distance.z / radius + 0.5f) * brushSize);
+
+                // Vérifie si les coordonnées sont dans les limites de la texture
+                if (pixelX >= 0 && pixelX < brushSize && pixelY >= 0 && pixelY < brushSize)
+                {
+                    float pixelIntensity = currentBrush.GetPixel(pixelX, pixelY).r;
+                    float force = deformationStrength * pixelIntensity;
 
                     if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
                     {
                         modifiedVerts[v] += Vector3.down * force;
-
                     }
                     else if (Input.GetMouseButtonDown(0))
                     {
@@ -101,9 +156,28 @@ public class TerrainController : MonoBehaviour
                     }
                 }
             }
-            RecalculateMesh();
         }
     }
+
+    void HandleBrushSwitch()
+    {
+        if (Input.GetKeyDown(KeyCode.B) && useBrushMode)
+        {
+            brushIndex = (brushIndex + 1) % brushTextures.Count;
+            Debug.Log("Brush changé : " + brushIndex);
+        }
+    }
+
+    void ToggleDeformationMode()
+    {
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            useBrushMode = !useBrushMode;
+            Debug.Log(useBrushMode ? "Mode brush activé" : "Mode pattern activé");
+        }
+    }
+
+
 
     int FindClosestVertex(Vector3 point)
     {
@@ -260,11 +334,11 @@ public class TerrainController : MonoBehaviour
 
     void HandlePatternSwitch()
     {
-        if (Input.GetKeyDown(KeyCode.P))
+        if (Input.GetKeyDown(KeyCode.P) && !useBrushMode)
         {
             patternIndex = (patternIndex + 1) % patterns.Count;
-            attenuationCurve = patterns[patternIndex]; // Applique le nouveau pattern
-            Debug.Log("Pattern changé: " + patternIndex);
+            attenuationCurve = patterns[patternIndex];
+            Debug.Log("Pattern changé : " + patternIndex);
         }
     }
 
