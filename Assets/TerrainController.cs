@@ -1,9 +1,14 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using UnityEngine;
+using UnityEngine.UI;
+
+
 
 public class TerrainController : MonoBehaviour
 {
-    // DÈclaration des variables de la classe
+    // D√©claration des variables de la classe
     private Mesh p_mesh;
     private Vector3[] p_vertices;
     private Vector3[] p_normals;
@@ -22,6 +27,12 @@ public class TerrainController : MonoBehaviour
     private bool IsInRotMode = false;
     private bool IsCharacterActive = false;
 
+
+    // Variables pour la gestion de l'interface utilisateur (UI)
+    public GameObject settingsCanvas;  // Interface pour le menu des param√®tres
+    public InputField dimensionInput;  // Champ de saisie pour la dimension
+    public InputField resolutionInput; // Champ de saisie pour la r√©solution
+
     //Deformation usage
     [Range(1.5f, 50f)]
     public float radius = 25f;
@@ -35,18 +46,16 @@ public class TerrainController : MonoBehaviour
     public List<AnimationCurve> patterns; // Liste des patterns
     private int patternIndex = 0; // Indice du pattern actuel
 
-    // MÈthode appelÈe au dÈmarrage
+    // M√©thode appel√©e au d√©marrage
     void Start()
     {
-        // CrÈer le terrain
+        // Cr√©er le terrain
         CreerTerrain();
+        settingsCanvas.SetActive(false);
 
-        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
-        vertices = p_mesh.vertices;
-        modifiedVerts = p_mesh.vertices;
     }
 
-    // MÈthode appelÈe ‡ chaque frame
+    // M√©thode appel√©e √† chaque frame
     void Update()
     {
         HandleTerrainRotation();
@@ -55,6 +64,8 @@ public class TerrainController : MonoBehaviour
         HandleDeformationIntensity();
         HandlePatternRadius();
         HandlePatternSwitch();
+        ActivationCanvas();
+
     }
 
     void HandleDeformation()
@@ -73,7 +84,7 @@ public class TerrainController : MonoBehaviour
             {
                 Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
 
-                // VÈrifier que le vertex est dans le rayon du pattern
+                // V√©rifier que le vertex est dans le rayon du pattern
                 if (distance.sqrMagnitude < radius * radius)
                 {
                     float normalizedDistance = distance.magnitude / radius;
@@ -118,7 +129,7 @@ public class TerrainController : MonoBehaviour
         p_mesh.RecalculateNormals();
     }
 
-    // MÈthode pour crÈer le terrain
+    // M√©thode pour cr√©er le terrain
     void CreerTerrain()
     {
         // Initialisation du mesh
@@ -131,12 +142,12 @@ public class TerrainController : MonoBehaviour
         p_normals = new Vector3[p_vertices.Length];
         p_triangles = new int[3 * 2 * (resolution - 1) * (resolution - 1)];
 
-        // RÈcupÈration des composants MeshFilter et MeshCollider
+        // R√©cup√©ration des composants MeshFilter et MeshCollider
         p_meshFilter = GetComponent<MeshFilter>();
         p_meshCollider = GetComponent<MeshCollider>();
 
         int indice_vertex = 0;
-        // Boucle pour dÈfinir les vertices et les normales
+        // Boucle pour d√©finir les vertices et les normales
         for (int j = 0; j < resolution; j++)
         {
             for (int i = 0; i < resolution; i++)
@@ -147,7 +158,7 @@ public class TerrainController : MonoBehaviour
             }
         }
 
-        // Centrer le pivot si nÈcessaire
+        // Centrer le pivot si n√©cessaire
         if (CentrerPivot)
         {
             Vector3 decalCentrage = new Vector3(dimension / 2, 0, dimension / 2);
@@ -156,7 +167,7 @@ public class TerrainController : MonoBehaviour
         }
 
         int indice_triangle = 0;
-        // Boucle pour dÈfinir les triangles
+        // Boucle pour d√©finir les triangles
         for (int j = 0; j < resolution - 1; j++)
         {
             for (int i = 0; i < resolution - 1; i++)
@@ -181,15 +192,19 @@ public class TerrainController : MonoBehaviour
         p_meshFilter.mesh = p_mesh;
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
+        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
+        vertices = p_mesh.vertices;
+        modifiedVerts = p_mesh.vertices;
+
     }
 
     void HandleTerrainRotation()
     {
-        // Rotation de l'objet si la touche RightControl est enfoncÈe
+        // Rotation de l'objet si la touche RightControl est enfonc√©e
         if (Input.GetKeyDown(KeyCode.RightControl))
         {
             IsInRotMode = !IsInRotMode;
-            Debug.Log(IsInRotMode ? "Rotation activÈ" : "Rotation dÈsactivÈ");
+            Debug.Log(IsInRotMode ? "Rotation activ√©" : "Rotation d√©sactiv√©");
         }
 
         if (IsInRotMode)
@@ -210,7 +225,7 @@ public class TerrainController : MonoBehaviour
 
     void HandleCharacterSpawn()
     {
-        // Activer le prefab capsule si la touche F2 est enfoncÈe
+        // Activer le prefab capsule si la touche F2 est enfonc√©e
         if (Input.GetKeyDown(KeyCode.F2))
         {
             IsCharacterActive = !IsCharacterActive;
@@ -249,7 +264,38 @@ public class TerrainController : MonoBehaviour
         {
             patternIndex = (patternIndex + 1) % patterns.Count;
             attenuationCurve = patterns[patternIndex]; // Applique le nouveau pattern
-            Debug.Log("Pattern changÈ: " + patternIndex);
+            Debug.Log("Pattern chang√©: " + patternIndex);
         }
     }
+
+    void ActivationCanvas()
+    {
+        // Ouvrir/fermer le menu des param√®tres avec F10
+        if (Input.GetKeyDown(KeyCode.F10))
+        {
+            settingsCanvas.SetActive(!settingsCanvas.activeSelf);
+        }
+
+        // Appliquer les param√®tres et recr√©er le terrain quand Enter est press√©
+        if (Input.GetKeyDown(KeyCode.Return) && settingsCanvas.activeSelf)
+        {
+            ApplySettings();
+        }
+    }
+
+    public void ApplySettings()
+    {
+        if (int.TryParse(dimensionInput.text, out int newDimension) && int.TryParse(resolutionInput.text, out int newResolution))
+        {
+            dimension = newDimension;
+            resolution = newResolution;
+            CreerTerrain();  // Recr√©er le terrain avec les nouvelles valeurs
+            settingsCanvas.SetActive(false);  // Fermer le menu des param√®tres
+        }
+        else
+        {
+            Debug.LogWarning("Entr√©e invalide pour la dimension ou la r√©solution.");
+        }
+    }
+
 }

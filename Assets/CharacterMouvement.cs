@@ -3,74 +3,102 @@ using UnityEngine;
 
 public class CharacterController : MonoBehaviour
 {
-    public GameObject character; // Capsule + Sphere (Corps + TÍte)
+    public GameObject character; // Capsule + Sphere (Corps + T√™te)
     public Camera thirdPersonCamera;
     public Camera firstPersonCamera;
-    public float moveSpeed = 5f;
+    public float baseMoveSpeed = 5f; // Vitesse de base
+    public float sprintSpeedMultiplier = 1.5f; // Multiplicateur de vitesse pour le sprint
     public float transitionDuration = 0.5f;
 
     private Vector3 destination;
     private bool isMoving = false;
     private bool isControlMode = false;
+    private bool isFreeMode = false; // Indique si le mode libre est actif
     private bool isFirstPerson = false;
 
-    public LayerMask terrainLayer;  // Ajoute cette ligne pour assigner le Layer dans Unity
-
+    public LayerMask terrainLayer;
 
     void Start()
     {
-        // DÈfinir l'Ètat initial : dÈsactiver le personnage, activer la camÈra ‡ la troisiËme personne
         firstPersonCamera.enabled = false;
         thirdPersonCamera.enabled = true;
-        character.SetActive(false); // Masquer le personnage initialement
+        character.SetActive(false);
     }
 
     void Update()
     {
         HandleControlModeToggle();
         HandleCameraSwitch();
-        HandleMovement();
+
+        if (isFreeMode)
+        {
+            HandleFreeModeMovement();
+        }
+        else
+        {
+            HandleMovement();
+        }
+
     }
 
     void HandleControlModeToggle()
     {
-        // Basculer le mode de contrÙle avec F2
+        // Basculer le mode de contr√¥le avec F2 pour le d√©placement vers une destination
+
         if (Input.GetKeyDown(KeyCode.F2))
         {
             isControlMode = !isControlMode;
+            isFreeMode = false;
             character.SetActive(isControlMode);
+            Debug.Log("Mode destination activ√© : " + isControlMode);
         }
 
-        // Quitter le mode de contrÙle avec …chap
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // Activer/d√©sactiver le mode libre avec F3
+        if (Input.GetKeyDown(KeyCode.F3))
         {
+            isFreeMode = !isFreeMode;
             isControlMode = false;
-            character.SetActive(false);
+            character.SetActive(isFreeMode);
+            Debug.Log("Mode libre activ√© : " + isFreeMode);
+
+            if (isFreeMode)
+            {
+                thirdPersonCamera.enabled = true; // Active la cam√©ra 3√®me personne par d√©faut
+            }
+            else
+            {
+                ExitFreeMode();
+            }
+        }
+    }
+
+
+        // Quitter le mode libre avec √âchap
+        if (Input.GetKeyDown(KeyCode.Escape) && isFreeMode)
+        {
+            ExitFreeMode();
+            Debug.Log("Mode libre d√©sactiv√© avec √âchap");
         }
     }
 
     void HandleCameraSwitch()
     {
-        // Basculer entre les camÈras ‡ la premiËre et ‡ la troisiËme personne avec Left Control
-        if (Input.GetKeyDown(KeyCode.LeftControl))
+        // Basculer entre les cam√©ras √† la premi√®re et √† la troisi√®me personne avec Left Control
+        if (Input.GetKeyDown(KeyCode.LeftControl) && isFreeMode)
         {
             isFirstPerson = !isFirstPerson;
             StartCoroutine(SwitchCamera(isFirstPerson));
         }
     }
 
+    // D√©placement vers une destination (mode F2)
     void HandleMovement()
     {
-        // DÈplacer le personnage avec un clic gauche de la souris lorsque le mode de contrÙle est actif
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !isFreeMode)
         {
-            //S'adapte en fonction de si la camera est TPS ou FPS
-            Ray ray;
-            if (thirdPersonCamera.enabled)
-            {
-                ray = thirdPersonCamera.ScreenPointToRay(Input.mousePosition);
-            }
-            else { ray = firstPersonCamera.ScreenPointToRay(Input.mousePosition); }
+            Ray ray = (thirdPersonCamera.enabled ? thirdPersonCamera : firstPersonCamera).ScreenPointToRay(Input.mousePosition);
+
+
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer))
             {
                 if (hit.collider.CompareTag("Terrain"))
@@ -80,10 +108,6 @@ public class CharacterController : MonoBehaviour
                     OrientCharacter(destination);
                 }
             }
-            else
-            {
-                Debug.Log("Raycast didn't hit anything"); // Affiche si rien n'est touchÈ
-            }
         }
 
         if (isControlMode || isMoving)
@@ -92,7 +116,28 @@ public class CharacterController : MonoBehaviour
         }
     }
 
-    // Tourner le personnage vers la destination
+    // D√©placement libre avec ZQSD, fl√®ches, et sprint avec Shift gauche
+    void HandleFreeModeMovement()
+    {
+        float speed = baseMoveSpeed;
+
+        // Augmentation de la vitesse avec Shift gauche
+        if (Input.GetKey(KeyCode.LeftShift))
+
+        {
+            speed *= sprintSpeedMultiplier;
+        }
+
+        // Entr√©es pour les d√©placements libres avec ZQSD et fl√®ches
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
+
+        // Calcul de la direction de d√©placement
+        Vector3 direction = new Vector3(horizontal, 0, vertical).normalized;
+        character.transform.Translate(direction * speed * Time.deltaTime, Space.Self);
+    }
+
+    // Tourner le personnage vers la destination et s'orienter selon la pente
     void OrientCharacter(Vector3 target)
     {
         Vector3 direction = (target - character.transform.position).normalized;
@@ -101,36 +146,36 @@ public class CharacterController : MonoBehaviour
         Debug.Log("Orienting character towards target at: " + target);
     }
 
-    // DÈplacer le personnage vers la destination
     void MoveCharacter()
     {
         if (isMoving)
         {
-            float step = moveSpeed * Time.deltaTime;
+            float step = baseMoveSpeed * Time.deltaTime;
             character.transform.position = Vector3.MoveTowards(character.transform.position, destination, step);
-            Debug.Log("Moving character to: " + destination);  // VÈrifie que le mouvement est bien effectuÈ
 
             if (Vector3.Distance(character.transform.position, destination) < 0.1f)
             {
                 isMoving = false;
-                Debug.Log("Character arrived at destination");  // VÈrifie que l'arrÍt du mouvement est correct
             }
         }
     }
 
-
-    // Transition fluide de la camÈra entre la premiËre et la troisiËme personne
     IEnumerator SwitchCamera(bool firstPerson)
     {
         float elapsedTime = 0;
-
         while (elapsedTime < transitionDuration)
         {
             elapsedTime += Time.deltaTime;
             yield return null;
         }
-
         firstPersonCamera.enabled = firstPerson;
         thirdPersonCamera.enabled = !firstPerson;
+    }
+
+    // Sortie du mode libre
+    void ExitFreeMode()
+    {
+        isFreeMode = false;
+        character.SetActive(false);
     }
 }
