@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class CharacterController : MonoBehaviour
 {
-    public GameObject character; // Capsule + Sphere (Corps + Tête)
+    public GameObject character; // Capsule + Sphere (Corps + TÃªte)
     public Camera thirdPersonCamera;
     public Camera firstPersonCamera;
     public float baseMoveSpeed = 5f; // Vitesse de base
@@ -38,48 +38,52 @@ public class CharacterController : MonoBehaviour
         {
             HandleMovement();
         }
+
     }
 
     void HandleControlModeToggle()
     {
-        // Basculer le mode de contrôle avec F2 pour le déplacement vers une destination
+        // Basculer le mode de contrÃ´le avec F2 pour le dÃ©placement vers une destination
+
         if (Input.GetKeyDown(KeyCode.F2))
         {
             isControlMode = !isControlMode;
             isFreeMode = false;
             character.SetActive(isControlMode);
-            Debug.Log("Mode destination activé : " + isControlMode);
+            Debug.Log("Mode destination activÃ© : " + isControlMode);
         }
 
-        // Activer/désactiver le mode libre avec F3
+        // Activer/dÃ©sactiver le mode libre avec F3
         if (Input.GetKeyDown(KeyCode.F3))
         {
             isFreeMode = !isFreeMode;
             isControlMode = false;
             character.SetActive(isFreeMode);
-            Debug.Log("Mode libre activé : " + isFreeMode);
+            Debug.Log("Mode libre activÃ© : " + isFreeMode);
 
             if (isFreeMode)
             {
-                thirdPersonCamera.enabled = true; // Active la caméra 3ème personne par défaut
+                thirdPersonCamera.enabled = true; // Active la camÃ©ra 3Ã¨me personne par dÃ©faut
             }
             else
             {
                 ExitFreeMode();
             }
         }
+    }
 
-        // Quitter le mode libre avec Échap
+
+        // Quitter le mode libre avec Ã‰chap
         if (Input.GetKeyDown(KeyCode.Escape) && isFreeMode)
         {
             ExitFreeMode();
-            Debug.Log("Mode libre désactivé avec Échap");
+            Debug.Log("Mode libre dÃ©sactivÃ© avec Ã‰chap");
         }
     }
 
     void HandleCameraSwitch()
     {
-        // Basculer entre les caméras à la première et à la troisième personne avec Left Control
+        // Basculer entre les camÃ©ras Ã  la premiÃ¨re et Ã  la troisiÃ¨me personne avec Left Control
         if (Input.GetKeyDown(KeyCode.LeftControl) && isFreeMode)
         {
             isFirstPerson = !isFirstPerson;
@@ -87,12 +91,13 @@ public class CharacterController : MonoBehaviour
         }
     }
 
-    // Déplacement vers une destination (mode F2)
+    // DÃ©placement vers une destination (mode F2)
     void HandleMovement()
     {
         if (Input.GetMouseButtonDown(0) && !isFreeMode)
         {
             Ray ray = (thirdPersonCamera.enabled ? thirdPersonCamera : firstPersonCamera).ScreenPointToRay(Input.mousePosition);
+
 
             if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, terrainLayer))
             {
@@ -111,22 +116,23 @@ public class CharacterController : MonoBehaviour
         }
     }
 
-    // Déplacement libre avec ZQSD, flèches, et sprint avec Shift gauche
+    // DÃ©placement libre avec ZQSD, flÃ¨ches, et sprint avec Shift gauche
     void HandleFreeModeMovement()
     {
         float speed = baseMoveSpeed;
 
         // Augmentation de la vitesse avec Shift gauche
         if (Input.GetKey(KeyCode.LeftShift))
+
         {
             speed *= sprintSpeedMultiplier;
         }
 
-        // Entrées pour les déplacements libres avec ZQSD et flèches
+        // EntrÃ©es pour les dÃ©placements libres avec ZQSD et flÃ¨ches
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
 
-        // Calcul de la direction de déplacement
+        // Calcul de la direction de dÃ©placement
         Vector3 direction = new Vector3(horizontal, 0, vertical).normalized;
         character.transform.Translate(direction * speed * Time.deltaTime, Space.Self);
     }
@@ -137,6 +143,7 @@ public class CharacterController : MonoBehaviour
         Vector3 direction = (target - character.transform.position).normalized;
         Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
         character.transform.rotation = Quaternion.Slerp(character.transform.rotation, lookRotation, Time.deltaTime * 5f);
+        Debug.Log("Orienting character towards target at: " + target);
     }
 
     void MoveCharacter()

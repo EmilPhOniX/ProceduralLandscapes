@@ -5,9 +5,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 
+
 public class TerrainController : MonoBehaviour
 {
-    // Déclaration des variables de la classe
+    // DÃ©claration des variables de la classe
     private Mesh p_mesh;
     private Vector3[] p_vertices;
     private Vector3[] p_normals;
@@ -26,11 +27,11 @@ public class TerrainController : MonoBehaviour
     private bool IsInRotMode = false;
     private bool IsCharacterActive = false;
 
-    // Variables pour la gestion de l'interface utilisateur (UI)
-    public GameObject settingsCanvas;  // Interface pour le menu des paramètres
-    public InputField dimensionInput;  // Champ de saisie pour la dimension
-    public InputField resolutionInput; // Champ de saisie pour la résolution
 
+    // Variables pour la gestion de l'interface utilisateur (UI)
+    public GameObject settingsCanvas;  // Interface pour le menu des paramÃ¨tres
+    public InputField dimensionInput;  // Champ de saisie pour la dimension
+    public InputField resolutionInput; // Champ de saisie pour la rÃ©solution
 
     //Deformation usage
     [Range(1.5f, 50f)]
@@ -45,15 +46,16 @@ public class TerrainController : MonoBehaviour
     public List<AnimationCurve> patterns; // Liste des patterns
     private int patternIndex = 0; // Indice du pattern actuel
 
-    // Méthode appelée au démarrage
+    // MÃ©thode appelÃ©e au dÃ©marrage
     void Start()
     {
-        // Créer le terrain
+        // CrÃ©er le terrain
         CreerTerrain();
         settingsCanvas.SetActive(false);
+
     }
 
-    // Méthode appelée à chaque frame
+    // MÃ©thode appelÃ©e Ã  chaque frame
     void Update()
     {
         HandleTerrainRotation();
@@ -63,6 +65,7 @@ public class TerrainController : MonoBehaviour
         HandlePatternRadius();
         HandlePatternSwitch();
         ActivationCanvas();
+
     }
 
     void HandleDeformation()
@@ -81,7 +84,7 @@ public class TerrainController : MonoBehaviour
             {
                 Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
 
-                // Vérifier que le vertex est dans le rayon du pattern
+                // VÃ©rifier que le vertex est dans le rayon du pattern
                 if (distance.sqrMagnitude < radius * radius)
                 {
                     float normalizedDistance = distance.magnitude / radius;
@@ -126,7 +129,7 @@ public class TerrainController : MonoBehaviour
         p_mesh.RecalculateNormals();
     }
 
-    // Méthode pour créer le terrain
+    // MÃ©thode pour crÃ©er le terrain
     void CreerTerrain()
     {
         // Initialisation du mesh
@@ -139,12 +142,12 @@ public class TerrainController : MonoBehaviour
         p_normals = new Vector3[p_vertices.Length];
         p_triangles = new int[3 * 2 * (resolution - 1) * (resolution - 1)];
 
-        // Récupération des composants MeshFilter et MeshCollider
+        // RÃ©cupÃ©ration des composants MeshFilter et MeshCollider
         p_meshFilter = GetComponent<MeshFilter>();
         p_meshCollider = GetComponent<MeshCollider>();
 
         int indice_vertex = 0;
-        // Boucle pour définir les vertices et les normales
+        // Boucle pour dÃ©finir les vertices et les normales
         for (int j = 0; j < resolution; j++)
         {
             for (int i = 0; i < resolution; i++)
@@ -155,7 +158,7 @@ public class TerrainController : MonoBehaviour
             }
         }
 
-        // Centrer le pivot si nécessaire
+        // Centrer le pivot si nÃ©cessaire
         if (CentrerPivot)
         {
             Vector3 decalCentrage = new Vector3(dimension / 2, 0, dimension / 2);
@@ -164,7 +167,7 @@ public class TerrainController : MonoBehaviour
         }
 
         int indice_triangle = 0;
-        // Boucle pour définir les triangles
+        // Boucle pour dÃ©finir les triangles
         for (int j = 0; j < resolution - 1; j++)
         {
             for (int i = 0; i < resolution - 1; i++)
@@ -189,19 +192,19 @@ public class TerrainController : MonoBehaviour
         p_meshFilter.mesh = p_mesh;
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
-
         p_mesh = GetComponentInChildren<MeshFilter>().mesh;
         vertices = p_mesh.vertices;
         modifiedVerts = p_mesh.vertices;
+
     }
 
     void HandleTerrainRotation()
     {
-        // Rotation de l'objet si la touche RightControl est enfoncée
+        // Rotation de l'objet si la touche RightControl est enfoncÃ©e
         if (Input.GetKeyDown(KeyCode.RightControl))
         {
             IsInRotMode = !IsInRotMode;
-            Debug.Log(IsInRotMode ? "Rotation activé" : "Rotation désactivé");
+            Debug.Log(IsInRotMode ? "Rotation activÃ©" : "Rotation dÃ©sactivÃ©");
         }
 
         if (IsInRotMode)
@@ -222,7 +225,7 @@ public class TerrainController : MonoBehaviour
 
     void HandleCharacterSpawn()
     {
-        // Activer le prefab capsule si la touche F2 est enfoncée
+        // Activer le prefab capsule si la touche F2 est enfoncÃ©e
         if (Input.GetKeyDown(KeyCode.F2))
         {
             IsCharacterActive = !IsCharacterActive;
@@ -261,19 +264,19 @@ public class TerrainController : MonoBehaviour
         {
             patternIndex = (patternIndex + 1) % patterns.Count;
             attenuationCurve = patterns[patternIndex]; // Applique le nouveau pattern
-            Debug.Log("Pattern changé: " + patternIndex);
+            Debug.Log("Pattern changÃ©: " + patternIndex);
         }
     }
 
     void ActivationCanvas()
     {
-        // Ouvrir/fermer le menu des paramètres avec F10
+        // Ouvrir/fermer le menu des paramÃ¨tres avec F10
         if (Input.GetKeyDown(KeyCode.F10))
         {
             settingsCanvas.SetActive(!settingsCanvas.activeSelf);
         }
 
-        // Appliquer les paramètres et recréer le terrain quand Enter est pressé
+        // Appliquer les paramÃ¨tres et recrÃ©er le terrain quand Enter est pressÃ©
         if (Input.GetKeyDown(KeyCode.Return) && settingsCanvas.activeSelf)
         {
             ApplySettings();
@@ -286,12 +289,13 @@ public class TerrainController : MonoBehaviour
         {
             dimension = newDimension;
             resolution = newResolution;
-            CreerTerrain();  // Recréer le terrain avec les nouvelles valeurs
-            settingsCanvas.SetActive(false);  // Fermer le menu des paramètres
+            CreerTerrain();  // RecrÃ©er le terrain avec les nouvelles valeurs
+            settingsCanvas.SetActive(false);  // Fermer le menu des paramÃ¨tres
         }
         else
         {
-            Debug.LogWarning("Entrée invalide pour la dimension ou la résolution.");
+            Debug.LogWarning("EntrÃ©e invalide pour la dimension ou la rÃ©solution.");
         }
     }
+
 }
