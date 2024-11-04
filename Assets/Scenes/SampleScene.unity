@@ -198,8 +198,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   CentrerPivot: 1
-  dimension: 15
-  resolution: 15
+  dimension: 160
+  resolution: 8
   capsulePrefab: {fileID: 1318749207}
   vitesse: 1
   settingsCanvas: {fileID: 1160026758}
@@ -301,6 +301,12 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  brushTextures:
+  - {fileID: 2800000, guid: 4428751f103c63946a1e8698033aeeb0, type: 3}
+  - {fileID: 2800000, guid: d36f3ebf6eb0446428d42c52c3e489ea, type: 3}
+  - {fileID: 2800000, guid: 5401f847023cea84c9813705b9ec09eb, type: 3}
+  - {fileID: 2800000, guid: 4ec965901b064db4a9d7e41b6cb9a9bd, type: 3}
+  - {fileID: 2800000, guid: 07e08d905a0341846bdec8de4d30fa7d, type: 3}
 --- !u!4 &10853084
 Transform:
   m_ObjectHideFlags: 0
@@ -1456,6 +1462,27 @@ Transform:
   m_Father: {fileID: 134210346}
   m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0.5}
+--- !u!114 &1318749212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1318749207}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4439b5f0b7375d94992eb4c55a1a0efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  character: {fileID: 1318749207}
+  thirdPersonCamera: {fileID: 318756638}
+  firstPersonCamera: {fileID: 604022977}
+  baseMoveSpeed: 5
+  sprintSpeedMultiplier: 1.5
+  transitionDuration: 0.5
+  terrainLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!1 &1646878548
 GameObject:
   m_ObjectHideFlags: 0
@@ -1827,5 +1854,5 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
