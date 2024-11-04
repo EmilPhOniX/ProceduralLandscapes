@@ -50,12 +50,7 @@ public class TerrainController : MonoBehaviour
     {
         // Créer le terrain
         CreerTerrain();
-
-        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
-        vertices = p_mesh.vertices;
-        modifiedVerts = p_mesh.vertices;
         settingsCanvas.SetActive(false);
-
     }
 
     // Méthode appelée à chaque frame
@@ -194,6 +189,10 @@ public class TerrainController : MonoBehaviour
         p_meshFilter.mesh = p_mesh;
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
+
+        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
+        vertices = p_mesh.vertices;
+        modifiedVerts = p_mesh.vertices;
     }
 
     void HandleTerrainRotation()
@@ -295,5 +294,4 @@ public class TerrainController : MonoBehaviour
             Debug.LogWarning("Entrée invalide pour la dimension ou la résolution.");
         }
     }
-
 }
