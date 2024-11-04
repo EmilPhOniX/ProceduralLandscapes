@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-public class CharacterController : MonoBehaviour
+public class CharacterMove : MonoBehaviour
 {
     public GameObject character; // Capsule + Sphere (Corps + Tête)
     public Camera thirdPersonCamera;
@@ -38,7 +38,6 @@ public class CharacterController : MonoBehaviour
         {
             HandleMovement();
         }
-
     }
 
     void HandleControlModeToggle()
@@ -70,8 +69,6 @@ public class CharacterController : MonoBehaviour
                 ExitFreeMode();
             }
         }
-    }
-
 
         // Quitter le mode libre avec Échap
         if (Input.GetKeyDown(KeyCode.Escape) && isFreeMode)
@@ -82,6 +79,7 @@ public class CharacterController : MonoBehaviour
     }
 
     void HandleCameraSwitch()
+
     {
         // Basculer entre les caméras à la première et à la troisième personne avec Left Control
         if (Input.GetKeyDown(KeyCode.LeftControl) && isFreeMode)
