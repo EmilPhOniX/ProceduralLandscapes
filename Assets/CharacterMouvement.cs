@@ -4,6 +4,7 @@ using UnityEngine;
 public class CharacterMove : MonoBehaviour
 {
     public GameObject character; // Capsule + Sphere (Corps + Tête)
+    public Transform pivot; // Point de rotation pour l'orientation du personnage
     public Camera thirdPersonCamera;
     public Camera firstPersonCamera;
     public float baseMoveSpeed = 5f; // Vitesse de base
@@ -82,7 +83,7 @@ public class CharacterMove : MonoBehaviour
 
     {
         // Basculer entre les caméras à la première et à la troisième personne avec Left Control
-        if (Input.GetKeyDown(KeyCode.LeftControl) && isFreeMode)
+        if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             isFirstPerson = !isFirstPerson;
             StartCoroutine(SwitchCamera(isFirstPerson));
@@ -132,15 +133,15 @@ public class CharacterMove : MonoBehaviour
 
         // Calcul de la direction de déplacement
         Vector3 direction = new Vector3(horizontal, 0, vertical).normalized;
-        character.transform.Translate(direction * speed * Time.deltaTime, Space.Self);
+        pivot.Translate(direction * speed * Time.deltaTime, Space.Self);
     }
 
     // Tourner le personnage vers la destination et s'orienter selon la pente
     void OrientCharacter(Vector3 target)
     {
-        Vector3 direction = (target - character.transform.position).normalized;
+        Vector3 direction = (target - pivot.position).normalized;
         Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
-        character.transform.rotation = Quaternion.Slerp(character.transform.rotation, lookRotation, Time.deltaTime * 5f);
+        pivot.rotation = lookRotation;
         Debug.Log("Orienting character towards target at: " + target);
     }
 
@@ -149,9 +150,9 @@ public class CharacterMove : MonoBehaviour
         if (isMoving)
         {
             float step = baseMoveSpeed * Time.deltaTime;
-            character.transform.position = Vector3.MoveTowards(character.transform.position, destination, step);
+            pivot.position = Vector3.MoveTowards(pivot.position, destination, step);
 
-            if (Vector3.Distance(character.transform.position, destination) < 0.1f)
+            if (Vector3.Distance(pivot.position, destination) < 0.1f)
             {
                 isMoving = false;
             }
@@ -168,6 +169,8 @@ public class CharacterMove : MonoBehaviour
         }
         firstPersonCamera.enabled = firstPerson;
         thirdPersonCamera.enabled = !firstPerson;
+
+
     }
 
     // Sortie du mode libre
