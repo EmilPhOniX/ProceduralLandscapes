@@ -21,11 +21,13 @@ public class TerrainController : MonoBehaviour
 
     private MeshRenderer p_meshRenderer;
     public GameObject capsulePrefab;
+    public GameObject terrainPrefab; // Préfabriqué pour chaque chunk
 
     public int vitesse = 0;
     private int angle = 0;
     private bool IsInRotMode = false;
     private bool IsCharacterActive = false;
+    private Dictionary<Vector2Int, GameObject> chunks = new Dictionary<Vector2Int, GameObject>();
 
 
     // Variables pour la gestion de l'interface utilisateur (UI)
@@ -50,7 +52,7 @@ public class TerrainController : MonoBehaviour
     void Start()
     {
         // Créer le terrain
-        CreerTerrain();
+        CreateInitialChunk();
         settingsCanvas.SetActive(false);
 
     }
@@ -66,7 +68,110 @@ public class TerrainController : MonoBehaviour
         HandlePatternSwitch();
         ActivationCanvas();
 
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            if (Input.GetKey(KeyCode.UpArrow))
+                AddChunk(Vector2Int.up);
+            else if (Input.GetKey(KeyCode.DownArrow))
+                AddChunk(Vector2Int.down);
+            else if (Input.GetKey(KeyCode.LeftArrow))
+                AddChunk(Vector2Int.left);
+            else if (Input.GetKey(KeyCode.RightArrow))
+                AddChunk(Vector2Int.right);
+        }
+
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            StartCoroutine(HighlightChunks());
+        }
+
     }
+
+
+    private void CreateInitialChunk()
+    {
+        GameObject initialChunk = Instantiate(terrainPrefab, Vector3.zero, Quaternion.identity);
+        initialChunk.transform.SetParent(transform);
+        chunks.Add(Vector2Int.zero, initialChunk);
+        CreerTerrain(initialChunk);
+    }
+
+
+    private void AddChunk(Vector2Int direction)
+    {
+        Vector2Int newChunkPosition = Vector2Int.zero + direction;
+        if (!chunks.ContainsKey(newChunkPosition))
+        {
+            GameObject newChunk = Instantiate(terrainPrefab);
+            newChunk.transform.position = new Vector3(newChunkPosition.x * dimension, 0, newChunkPosition.y * dimension);
+            newChunk.transform.SetParent(transform);
+            chunks.Add(newChunkPosition, newChunk);
+
+            SetChunkVertices(newChunk, direction);
+        }
+    }
+
+    private void SetChunkVertices(GameObject newChunk, Vector2Int direction)
+    {
+        Mesh mesh = newChunk.GetComponent<MeshFilter>().mesh;
+        Vector3[] vertices = mesh.vertices;
+
+        if (chunks.ContainsKey(Vector2Int.zero - direction))
+        {
+            GameObject adjacentChunk = chunks[Vector2Int.zero - direction];
+            Mesh adjacentMesh = adjacentChunk.GetComponent<MeshFilter>().mesh;
+            Vector3[] adjacentVertices = adjacentMesh.vertices;
+
+            int resolution = Mathf.RoundToInt(Mathf.Sqrt(vertices.Length)); // Nombre de vertices par ligne de chunk
+
+            // Copier les vertices du bord en fonction de la direction
+            if (direction == Vector2Int.up) // Nouveau chunk au-dessus
+            {
+                for (int i = 0; i < resolution; i++)
+                {
+                    vertices[i] = adjacentVertices[vertices.Length - resolution + i];
+                }
+            }
+            else if (direction == Vector2Int.down) // Nouveau chunk en-dessous
+            {
+                for (int i = 0; i < resolution; i++)
+                {
+                    vertices[vertices.Length - resolution + i] = adjacentVertices[i];
+                }
+            }
+            else if (direction == Vector2Int.left) // Nouveau chunk à gauche
+            {
+                for (int i = 0; i < resolution; i++)
+                {
+                    vertices[i * resolution] = adjacentVertices[i * resolution + (resolution - 1)];
+                }
+            }
+            else if (direction == Vector2Int.right) // Nouveau chunk à droite
+            {
+                for (int i = 0; i < resolution; i++)
+                {
+                    vertices[i * resolution + (resolution - 1)] = adjacentVertices[i * resolution];
+                }
+            }
+        }
+
+        mesh.vertices = vertices;
+        mesh.RecalculateNormals();
+    }
+
+
+    private IEnumerator HighlightChunks()
+    {
+        foreach (var chunk in chunks.Values)
+        {
+            Renderer renderer = chunk.GetComponent<Renderer>();
+            Material originalMaterial = renderer.material;
+            renderer.material.color = Random.ColorHSV();
+            yield return new WaitForSeconds(3);
+            renderer.material = originalMaterial;
+        }
+    }
+
 
     void HandleDeformation()
     {
@@ -77,31 +182,30 @@ public class TerrainController : MonoBehaviour
         {
             Vector3 hitPoint = hit.point;
 
-            int closestVertexIndex = FindClosestVertex(hitPoint);
-
-            // Appliquer le pattern aux vertices dans le rayon
-            for (int v = 0; v < modifiedVerts.Length; v++)
+            foreach (var chunk in chunks.Values)
             {
-                Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
+                Mesh mesh = chunk.GetComponent<MeshFilter>().mesh;
+                Vector3[] vertices = mesh.vertices;
+                int closestVertexIndex = FindClosestVertex(hitPoint);
 
-                // Vérifier que le vertex est dans le rayon du pattern
-                if (distance.sqrMagnitude < radius * radius)
+                for (int v = 0; v < vertices.Length; v++)
                 {
-                    float normalizedDistance = distance.magnitude / radius;
-                    float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
+                    Vector3 distance = vertices[v] - vertices[closestVertexIndex];
 
-                    if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
+                    if (distance.sqrMagnitude < radius * radius)
                     {
-                        modifiedVerts[v] += Vector3.down * force;
+                        float normalizedDistance = distance.magnitude / radius;
+                        float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
 
-                    }
-                    else if (Input.GetMouseButtonDown(0))
-                    {
-                        modifiedVerts[v] += Vector3.up * force;
+                        if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
+                            vertices[v] += Vector3.down * force;
+                        else if (Input.GetMouseButtonDown(0))
+                            vertices[v] += Vector3.up * force;
                     }
                 }
+                mesh.vertices = vertices;
+                mesh.RecalculateNormals();
             }
-            RecalculateMesh();
         }
     }
 
@@ -130,73 +234,45 @@ public class TerrainController : MonoBehaviour
     }
 
     // Méthode pour créer le terrain
-    void CreerTerrain()
+    void CreerTerrain(GameObject terrainChunk)
     {
-        // Initialisation du mesh
-        p_mesh = new Mesh();
-        p_mesh.Clear();
-        p_mesh.name = "ProceduralTerrainMESH";
-
-        // Initialisation des tableaux de vertices, normales et triangles
-        p_vertices = new Vector3[resolution * resolution];
-        p_normals = new Vector3[p_vertices.Length];
-        p_triangles = new int[3 * 2 * (resolution - 1) * (resolution - 1)];
-
-        // Récupération des composants MeshFilter et MeshCollider
-        p_meshFilter = GetComponent<MeshFilter>();
-        p_meshCollider = GetComponent<MeshCollider>();
+        Mesh mesh = new Mesh();
+        Vector3[] vertices = new Vector3[resolution * resolution];
+        int[] triangles = new int[6 * (resolution - 1) * (resolution - 1)];
 
         int indice_vertex = 0;
-        // Boucle pour définir les vertices et les normales
         for (int j = 0; j < resolution; j++)
         {
             for (int i = 0; i < resolution; i++)
             {
-                p_vertices[indice_vertex] = new Vector3((float)i / resolution * dimension, 0, (float)j / resolution * dimension);
-                p_normals[indice_vertex] = new Vector3(0, 1, 0);
+                vertices[indice_vertex] = new Vector3((float)i / resolution * dimension, 0, (float)j / resolution * dimension);
                 indice_vertex++;
             }
         }
 
-        // Centrer le pivot si nécessaire
-        if (CentrerPivot)
-        {
-            Vector3 decalCentrage = new Vector3(dimension / 2, 0, dimension / 2);
-            for (int k = 0; k < p_vertices.Length; k++)
-                p_vertices[k] -= decalCentrage;
-        }
-
         int indice_triangle = 0;
-        // Boucle pour définir les triangles
         for (int j = 0; j < resolution - 1; j++)
         {
             for (int i = 0; i < resolution - 1; i++)
             {
-                p_triangles[indice_triangle + 0] = j * resolution + i;
-                p_triangles[indice_triangle + 1] = (j + 1) * resolution + i;
-                p_triangles[indice_triangle + 2] = j * resolution + (i + 1);
-                indice_triangle += 3;
-                p_triangles[indice_triangle + 0] = j * resolution + (i + 1);
-                p_triangles[indice_triangle + 1] = (j + 1) * resolution + i;
-                p_triangles[indice_triangle + 2] = (j + 1) * resolution + (i + 1);
-                indice_triangle += 3;
+                triangles[indice_triangle] = j * resolution + i;
+                triangles[indice_triangle + 1] = (j + 1) * resolution + i;
+                triangles[indice_triangle + 2] = j * resolution + (i + 1);
+                triangles[indice_triangle + 3] = j * resolution + (i + 1);
+                triangles[indice_triangle + 4] = (j + 1) * resolution + i;
+                triangles[indice_triangle + 5] = (j + 1) * resolution + (i + 1);
+                indice_triangle += 6;
             }
         }
 
-        // Assignation des vertices, normales et triangles au mesh
-        p_mesh.vertices = p_vertices;
-        p_mesh.normals = p_normals;
-        p_mesh.triangles = p_triangles;
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
 
-        // Assignation du mesh au MeshFilter et au MeshCollider
-        p_meshFilter.mesh = p_mesh;
-        p_meshCollider.sharedMesh = null;
-        p_meshCollider.sharedMesh = p_meshFilter.mesh;
-        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
-        vertices = p_mesh.vertices;
-        modifiedVerts = p_mesh.vertices;
-
+        terrainChunk.GetComponent<MeshFilter>().mesh = mesh;
+        terrainChunk.GetComponent<MeshCollider>().sharedMesh = mesh;
     }
+
 
     void HandleTerrainRotation()
     {
@@ -285,17 +361,38 @@ public class TerrainController : MonoBehaviour
 
     public void ApplySettings()
     {
+        // Récupérer les nouvelles dimensions et résolution depuis les champs de saisie de l'UI
         if (int.TryParse(dimensionInput.text, out int newDimension) && int.TryParse(resolutionInput.text, out int newResolution))
         {
+            // Mettre à jour les dimensions et la résolution avec les nouvelles valeurs
             dimension = newDimension;
             resolution = newResolution;
-            CreerTerrain();  // Recréer le terrain avec les nouvelles valeurs
-            settingsCanvas.SetActive(false);  // Fermer le menu des paramètres
+
+            // Supprimer tous les chunks existants
+            foreach (var chunk in chunks.Values)
+            {
+                Destroy(chunk);
+            }
+            chunks.Clear();
+
+            // Créer le chunk initial avec les nouvelles dimensions et résolution
+            CreateInitialChunk();
+
+            // Si des chunks supplémentaires avaient été ajoutés auparavant, 
+            // on peut les récréer pour obtenir une grille complète avec continuité
+            AddChunk(Vector2Int.up);
+            AddChunk(Vector2Int.down);
+            AddChunk(Vector2Int.left);
+            AddChunk(Vector2Int.right);
+
+            // Fermer le menu des paramètres
+            settingsCanvas.SetActive(false);
         }
         else
         {
             Debug.LogWarning("Entrée invalide pour la dimension ou la résolution.");
         }
     }
+
 
 }
