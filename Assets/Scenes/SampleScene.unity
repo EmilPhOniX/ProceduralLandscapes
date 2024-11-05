@@ -198,8 +198,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   CentrerPivot: 0
-  dimension: 160
-  resolution: 8
+  dimension: 100
+  resolution: 100
   terrainPrefab: {fileID: 10853081}
   extensionSize: 300
   capsulePrefab: {fileID: 1318749207}

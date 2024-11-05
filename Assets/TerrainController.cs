@@ -216,10 +216,11 @@ public class TerrainController : MonoBehaviour
         modifiedVerts = p_mesh.vertices;
     }
 
+    // Ajout d'une extension de terrain
     void AddTerrainExtension(Vector3 direction)
     {
-        // Calcul de la position de spawn en tenant compte de la dimension du terrain
-        Vector3 spawnPosition = transform.position + direction * dimension;
+        // Utilisation de la dimension réelle pour positionner précisément le chunk suivant
+        Vector3 spawnPosition = transform.position + direction * (dimension * (resolution - 1) / (float)resolution);
         GameObject newTerrain = Instantiate(terrainPrefab, spawnPosition, Quaternion.identity);
         TerrainController newTerrainGenerator = newTerrain.GetComponent<TerrainController>();
 
@@ -227,9 +228,11 @@ public class TerrainController : MonoBehaviour
         newTerrainGenerator.resolution = resolution;
         newTerrainGenerator.CreerTerrain();
 
+        // Aligner les bords du nouveau chunk avec le chunk voisin
         AlignEdgesWithNeighbor(newTerrainGenerator, direction);
     }
 
+    // Alignement des bords pour continuité entre chunks
     void AlignEdgesWithNeighbor(TerrainController newTerrain, Vector3 direction)
     {
         Vector3[] newVertices = newTerrain.p_mesh.vertices;
@@ -238,28 +241,28 @@ public class TerrainController : MonoBehaviour
         {
             for (int i = 0; i < resolution; i++)
             {
-                newVertices[i] = p_vertices[(resolution - 1) * resolution + i];
+                newVertices[i] = p_vertices[(resolution - 1) * resolution + i]; // Copier le bord sud de l'ancien terrain
             }
         }
         else if (direction == Vector3.back) // Alignement sud
         {
             for (int i = 0; i < resolution; i++)
             {
-                newVertices[(resolution - 1) * resolution + i] = p_vertices[i];
+                newVertices[(resolution - 1) * resolution + i] = p_vertices[i]; // Copier le bord nord de l'ancien terrain
             }
         }
         else if (direction == Vector3.left) // Alignement ouest
         {
             for (int i = 0; i < resolution; i++)
             {
-                newVertices[i * resolution + (resolution - 1)] = p_vertices[i * resolution];
+                newVertices[i * resolution + (resolution - 1)] = p_vertices[i * resolution]; // Copier le bord est de l'ancien terrain
             }
         }
         else if (direction == Vector3.right) // Alignement est
         {
             for (int i = 0; i < resolution; i++)
             {
-                newVertices[i * resolution] = p_vertices[i * resolution + (resolution - 1)];
+                newVertices[i * resolution] = p_vertices[i * resolution + (resolution - 1)]; // Copier le bord ouest de l'ancien terrain
             }
         }
 
