@@ -76,28 +76,7 @@ public class TerrainController : MonoBehaviour
     }
     
     // ---Fonctions de gestion du terrain---
-    void HandleDeformation()
-    {
-        RaycastHit hit;
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity))
-        {
-            Vector3 hitPoint = hit.point;
-            int closestVertexIndex = FindClosestVertex(hitPoint);
-
-            // Applique la déformation selon le mode sélectionné
-            if (useBrushMode)
-            {
-                ApplyBrushDeformation(closestVertexIndex); // Déformation avec brush
-            }
-            else
-            {
-                ApplyPatternDeformation(closestVertexIndex); // Déformation avec pattern
-            }
-            RecalculateMesh(); // Recalcule le mesh pour appliquer la déformation
-        }
-    }
+    
 
     void ApplyPatternDeformation(int closestVertexIndex)
     {
@@ -197,13 +176,7 @@ public class TerrainController : MonoBehaviour
         return closestIndex;
     }
 
-    void RecalculateMesh()
-    {
-        p_mesh.vertices = modifiedVerts;
-        GetComponentInChildren<MeshCollider>().sharedMesh = p_mesh;
-        p_mesh.RecalculateNormals();
-    }
-
+    
     // Méthode pour créer le terrain
     void CreerTerrain()
     {
