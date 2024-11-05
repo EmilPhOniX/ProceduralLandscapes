@@ -27,6 +27,10 @@ public class TerrainController : MonoBehaviour
     public InputField dimensionInput;  // Champ de saisie pour la dimension
     public InputField resolutionInput; // Champ de saisie pour la résolution
 
+    public GameObject infoCanvas; // Associe ici le Canvas d'information depuis l'éditeur
+    public Text infoText; // Associe ici le Text du menu pour afficher les informations
+    public Text infoText2;
+
     //Deformation usage
     [Range(1f, 50f)]
     public float radius = 25f;
@@ -61,6 +65,7 @@ public class TerrainController : MonoBehaviour
         // Créer le terrain
         CreerTerrain();
         settingsCanvas.SetActive(false);
+        infoCanvas.SetActive(false);
     }
 
     // Méthode appelée à chaque frame
@@ -76,8 +81,141 @@ public class TerrainController : MonoBehaviour
         HandleBrushSwitch();
         ToggleDeformationMode();
         HandleUndoRedo();
+
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            ToggleInfoPanel();
+        }
     }
-    
+
+    // Implémentation F1
+
+    void ToggleInfoPanel()
+    {
+        if (infoCanvas.activeSelf)
+        {
+            infoCanvas.SetActive(false);
+        }
+        else
+        {
+            UpdateInfoText(); // Met à jour le contenu
+            infoCanvas.SetActive(true);
+        }
+    }
+
+    void UpdateInfoText()
+    {
+        // Informations générales sur le terrain
+        infoText.text = "Propriétés du Terrain :\n";
+        infoText.text += $"Dimension : {dimension}\n";
+        infoText.text += $"Résolution : {resolution}\n\n";
+        infoText.text += $"Rayon de Déformation : {radius}\n";
+        infoText.text += $"Force de Déformation : {deformationStrength}\n\n";
+
+        // Informations spécifiques à la déformation (Exercice 3)
+        infoText.text += "Déformation du Terrain :\n";
+        infoText.text += $"Mode de Déformation : {(useBrushMode ? "Brush" : "Pattern")}\n";
+        infoText.text += $"Nom du Pattern/Brush : {(useBrushMode ? brushTextures[brushIndex].name : $"Pattern {patternIndex}")}\n";
+        infoText.text += $"Rayon de Déformation : {radius}\n";
+        infoText.text += $"Intensité de Déformation : {deformationStrength}\n";
+        infoText.text += $"Type de Distance : {currentDistanceType}\n\n";
+
+        // Raccourcis pour le contrôle de la déformation
+        infoText.text += "Contrôles de Déformation :\n";
+        infoText.text += "F - Alterner les types de distance pour la déformation (Euclidean, Manhattan, Chebyshev)\n";
+        infoText.text += "N - Basculer le recalcul sélectif des normales\n";
+        infoText.text += "R - Basculer entre le mode de voisinage grille et espace monde\n";
+        infoText.text += "CTRL+Click - Creuser\n";
+        infoText.text += "+ / - : Ajuster le rayon de déformation\n";
+        infoText.text += "Alt / AltGr : Ajuster l'intensité de déformation\n";
+        infoText.text += "P - Changer de pattern de déformation\n";
+        infoText.text += "B - Changer de brush de déformation\n";
+        infoText.text += "C - Basculer entre les modes Brush et Pattern\n\n";
+
+        // Contrôles du Terrain et de l'Interface (Exercice 2 et Exercice 4)
+        infoText.text += "Contrôles du Terrain :\n";
+        infoText.text += "F10 - Ouvrir le menu des paramètres (dimension, résolution)\n\n";
+        infoText.text += "Entrée - Appliquer les paramètres\n\n";
+
+        // Contrôles de la caméra (FlyCamera) et du personnage (CharacterMove)
+        infoText.text += "Contrôles de la Caméra :\n";
+        infoText.text += "Right Control - Activer/désactiver la rotation de la caméra\n";
+        infoText.text += "Z / A - Monter / Descendre\n";
+        infoText.text += "ZQSD ou flèches - Déplacer la caméra\n";
+        infoText.text += "Shift gauche - Déplacement rapide\n";
+        infoText.text += "CTRL gauche - Déplacement lent\n\n";
+
+        infoText2.text += "Contrôles du Personnage :\n";
+        infoText2.text += "F2 - Activer le mode de déplacement vers une destination\n";
+        infoText2.text += "F3 - Activer le mode libre\n";
+        infoText2.text += "Échap - Quitter le mode libre\n";
+        infoText2.text += "CTRL gauche - Passer en vue première personne\n";
+        infoText2.text += "ZQSD ou flèches - Déplacer en mode libre\n";
+        infoText2.text += "Shift gauche - Sprint\n";
+
+        // --- Optimisations (Exercice 5) ---
+        infoText2.text += "Paramètres d'Optimisation :\n";
+        infoText2.text += $"Distance pour le vertex sélectionné : {currentDistanceType}\n";
+        infoText2.text += $"Distance pour les voisins : {neighborDistanceType}\n";
+        infoText2.text += $"Approximation activée : {(useApproximation ? "Oui" : "Non")}\n";
+        infoText2.text += $"Recalcul sélectif des normales : {(recalculateSelectiveNormals ? "Oui" : "Non")}\n";
+        infoText2.text += $"Mode de voisinage : {(useGridSpaceForNeighbors ? "Grille" : "Espace Monde")}\n\n";
+
+        // Contrôles des Optimisations
+        infoText2.text += "Contrôles d'Optimisation :\n";
+        infoText2.text += "F - Alterner les types de distance pour la sélection du vertex\n";
+        infoText2.text += "V - Alterner les types de distance pour les voisins\n";
+        infoText2.text += "T - Activer/désactiver l'approximation\n";
+        infoText2.text += "N - Activer/désactiver le recalcul sélectif des normales\n";
+        infoText2.text += "R - Basculer entre le mode de voisinage grille et espace monde\n";
+
+        /*// --- Chunks (Exercice 6) ---
+        infoText.text += "Informations des Chunks :\n";
+        infoText.text += $"Nombre de Chunks : {GetChunkCount()}\n";
+        infoText.text += $"Nombre total de Triangles : {GetTotalTriangles()}\n";
+        infoText.text += $"Nombre total de Sommets : {GetTotalVertices()}\n\n";
+
+        // Contrôles pour les Chunks
+        infoText.text += "Contrôles des Chunks :\n";
+        infoText.text += "F5 + flèches - Ajouter un Chunk dans une direction\n";
+        infoText.text += "M - Marquer les Chunks pendant 3 secondes\n";
+
+        int GetChunkCount()
+        {
+            // Remplacez cette fonction par votre méthode de comptage des chunks
+            return 1; // Par exemple, changez avec la logique réelle de comptage des chunks
+        }
+
+        int GetTotalTriangles()
+        {
+            // Remplacez cette fonction par votre méthode de comptage des triangles
+            return p_mesh.triangles.Length / 3; // Exemple basé sur un seul chunk
+        }
+
+        int GetTotalVertices()
+        {
+            // Remplacez cette fonction par votre méthode de comptage des sommets
+            return p_mesh.vertices.Length; // Exemple basé sur un seul chunk
+        }*/
+        if (useBrushMode)
+        {
+            infoText2.text += "Déformation par Brush :\n";
+            infoText2.text += $"Brush Actuel : {brushTextures[brushIndex].name}\n";
+            infoText2.text += $"Rayon du Brush : {radius}\n";
+            infoText2.text += $"Intensité du Brush : {deformationStrength}\n";
+            infoText2.text += "B - Changer de brush de déformation\n";
+        }
+        else
+        {
+            infoText2.text += "Déformation par Pattern :\n";
+            infoText2.text += $"Pattern Actuel : $\"Pattern {{patternIndex}}\"\n";
+            infoText2.text += "P - Changer de pattern de déformation\n";
+        }
+
+        infoText2.text += "\nC - Basculer entre les modes Brush et Pattern\n";
+    }
+
+
     void HandleUndoRedo()
     {
         if (Input.GetKeyDown(KeyCode.J)) // Undo avec la touche J
