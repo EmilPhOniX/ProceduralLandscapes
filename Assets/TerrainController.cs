@@ -51,6 +51,9 @@ public class TerrainController : MonoBehaviour
     private int brushIndex = 0; // Indice du brush actuellement sélectionné
     private bool useBrushMode = false; // Booléen pour indiquer le mode de déformation (false pour pattern, true pour brush)
 
+    private Stack<Vector3[]> undoStack = new Stack<Vector3[]>(); // Pile pour Undo
+    private Stack<Vector3[]> redoStack = new Stack<Vector3[]>(); // Pile pour Redo
+
 
     // Méthode appelée au démarrage
     void Start()
@@ -58,7 +61,6 @@ public class TerrainController : MonoBehaviour
         // Créer le terrain
         CreerTerrain();
         settingsCanvas.SetActive(false);
-
     }
 
     // Méthode appelée à chaque frame
@@ -73,24 +75,63 @@ public class TerrainController : MonoBehaviour
         ActivationCanvas();
         HandleBrushSwitch();
         ToggleDeformationMode();
+        HandleUndoRedo();
     }
     
-    // ---Fonctions de gestion du terrain---
-    
+    void HandleUndoRedo()
+    {
+        if (Input.GetKeyDown(KeyCode.J)) // Undo avec la touche J
+        {
+            UndoDeformation();
+        }
+        else if (Input.GetKeyDown(KeyCode.K)) // Redo avec la touche K
+        {
+            RedoDeformation();
+        }
+    }
+
+    // Fonction pour annuler la dernière déformation
+    void UndoDeformation()
+    {
+        if (undoStack.Count > 0)
+        {
+            redoStack.Push((Vector3[])modifiedVerts.Clone()); // Sauvegarde dans Redo avant l'annulation
+            modifiedVerts = undoStack.Pop();
+            RecalculateMesh();
+            UpdateMeshCollider();
+        }
+    }
+
+    // Fonction pour rétablir une déformation annulée
+    void RedoDeformation()
+    {
+        if (redoStack.Count > 0)
+        {
+            undoStack.Push((Vector3[])modifiedVerts.Clone()); // Sauvegarde dans Undo avant le rétablissement
+            modifiedVerts = redoStack.Pop();
+            RecalculateMesh();
+            UpdateMeshCollider();
+        }
+    }
+    void SaveCurrentState()
+    {
+        undoStack.Push((Vector3[])modifiedVerts.Clone()); // Sauvegarde de l'état actuel pour Undo
+        redoStack.Clear(); // Réinitialise la pile Redo
+    }
 
     void ApplyPatternDeformation(int closestVertexIndex)
     {
+        SaveCurrentState(); // Sauvegarde de l'état initial
+
         for (int v = 0; v < modifiedVerts.Length; v++)
         {
             Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
 
-            // Vérifie que le vertex est dans le rayon du pattern
             if (distance.sqrMagnitude < radius * radius)
             {
                 float normalizedDistance = distance.magnitude / radius;
                 float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
 
-                // Applique la déformation en fonction de la touche de la souris et du contrôle
                 if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
                 {
                     modifiedVerts[v] += Vector3.down * force;
@@ -101,10 +142,14 @@ public class TerrainController : MonoBehaviour
                 }
             }
         }
+        RecalculateMesh();
+        UpdateMeshCollider();
     }
 
     void ApplyBrushDeformation(int closestVertexIndex)
     {
+        SaveCurrentState(); // Sauvegarde de l'état initial
+
         Texture2D currentBrush = brushTextures[brushIndex];
         int brushSize = currentBrush.width;
 
@@ -116,11 +161,9 @@ public class TerrainController : MonoBehaviour
             {
                 float normalizedDistance = distance.magnitude / radius;
 
-                // Calcul des coordonnées dans la texture
                 int pixelX = Mathf.FloorToInt((distance.x / radius + 0.5f) * brushSize);
                 int pixelY = Mathf.FloorToInt((distance.z / radius + 0.5f) * brushSize);
 
-                // Vérifie si les coordonnées sont dans les limites de la texture
                 if (pixelX >= 0 && pixelX < brushSize && pixelY >= 0 && pixelY < brushSize)
                 {
                     float pixelIntensity = currentBrush.GetPixel(pixelX, pixelY).r;
@@ -137,6 +180,8 @@ public class TerrainController : MonoBehaviour
                 }
             }
         }
+        RecalculateMesh();
+        UpdateMeshCollider();
     }
 
     void HandleBrushSwitch()
@@ -157,8 +202,6 @@ public class TerrainController : MonoBehaviour
         }
     }
 
-
-
     int FindClosestVertex(Vector3 point)
     {
         int closestIndex = 0;
@@ -176,7 +219,6 @@ public class TerrainController : MonoBehaviour
         return closestIndex;
     }
 
-    
     // Méthode pour créer le terrain
     void CreerTerrain()
     {
@@ -283,6 +325,11 @@ public class TerrainController : MonoBehaviour
 
     void HandleDeformation()
     {
+        if (Input.GetMouseButtonDown(0))
+        {
+            SaveCurrentState(); // Sauvegarde de l'état initial
+            isDeforming = true;
+        }
         if (Input.GetKeyDown(KeyCode.F))
         {
             currentDistanceType = (DistanceType)(((int)currentDistanceType + 1) % 3);
