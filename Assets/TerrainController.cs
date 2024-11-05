@@ -77,7 +77,7 @@ public class TerrainController : MonoBehaviour
         ToggleDeformationMode();
         HandleUndoRedo();
     }
-
+    
     void HandleUndoRedo()
     {
         if (Input.GetKeyDown(KeyCode.J)) // Undo avec la touche J
@@ -219,7 +219,6 @@ public class TerrainController : MonoBehaviour
         return closestIndex;
     }
 
-
     // Méthode pour créer le terrain
     void CreerTerrain()
     {
@@ -331,7 +330,6 @@ public class TerrainController : MonoBehaviour
             SaveCurrentState(); // Sauvegarde de l'état initial
             isDeforming = true;
         }
-
         if (Input.GetKeyDown(KeyCode.F))
         {
             currentDistanceType = (DistanceType)(((int)currentDistanceType + 1) % 3);
