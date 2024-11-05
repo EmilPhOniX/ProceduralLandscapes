@@ -1,9 +1,12 @@
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using UnityEngine;
+using UnityEngine.UI;
 
-public class TerrainTerrainController : MonoBehaviour
+public class TerrainController : MonoBehaviour
 {
-    // Déclaration des variables de la classe
+    // DÃ©claration des variables de la classe
     private Mesh p_mesh;
     private Vector3[] p_vertices;
     private Vector3[] p_normals;
@@ -19,15 +22,22 @@ public class TerrainTerrainController : MonoBehaviour
     private int angle = 0;
     private bool IsInRotMode = false;
     private bool IsCharacterActive = false;
-    [Range(1.5f, 50f)]
-    public float radius = 2f;
-    [Range(0.5f, 50f)]
-    public float deformationStrength = 2f;
+    // Variables pour la gestion de l'interface utilisateur (UI)
+    public GameObject settingsCanvas;  // Interface pour le menu des paramÃ¨tres
+    public InputField dimensionInput;  // Champ de saisie pour la dimension
+    public InputField resolutionInput; // Champ de saisie pour la rÃ©solution
+
+    //Deformation usage
+    [Range(1f, 50f)]
+    public float radius = 25f;
+    [Range(1f, 50f)]
+    public float deformationStrength = 25f;
+
     public AnimationCurve attenuationCurve;
     private Vector3[] vertices, modifiedVerts;
     public List<AnimationCurve> patterns; // Liste des patterns
     private int patternIndex = 0; // Indice du pattern actuel
-    private bool useApproximation = false; // Active ou désactive l'approximation
+    private bool useApproximation = false; // Active ou dï¿½sactive l'approximation
     private bool recalculateSelectiveNormals = false;
     private bool isDeforming = false;
     private bool useGridSpaceForNeighbors = true;
@@ -36,17 +46,22 @@ public class TerrainTerrainController : MonoBehaviour
     private DistanceType currentDistanceType = DistanceType.Euclidean;
     private DistanceType neighborDistanceType = DistanceType.Euclidean;
 
-    // Méthode appelée au démarrage
+    //brush
+    public List<Texture2D> brushTextures; // Liste des textures utilisÃ©es comme brushes
+    private int brushIndex = 0; // Indice du brush actuellement sÃ©lectionnÃ©
+    private bool useBrushMode = false; // BoolÃ©en pour indiquer le mode de dÃ©formation (false pour pattern, true pour brush)
+
+
+    // MÃ©thode appelÃ©e au dÃ©marrage
     void Start()
     {
+        // CrÃ©er le terrain
         CreerTerrain();
+        settingsCanvas.SetActive(false);
 
-        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
-        vertices = p_mesh.vertices;
-        modifiedVerts = p_mesh.vertices;
     }
 
-    // Méthode appelée à chaque frame
+    // MÃ©thode appelÃ©e Ã  chaque frame
     void Update()
     {
         HandleTerrainRotation();
@@ -55,10 +70,141 @@ public class TerrainTerrainController : MonoBehaviour
         HandleDeformationIntensity();
         HandlePatternRadius();
         HandlePatternSwitch();
+        ActivationCanvas();
+        HandleBrushSwitch();
+        ToggleDeformationMode();
+    }
+    
+    // ---Fonctions de gestion du terrain---
+    void HandleDeformation()
+    {
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity))
+        {
+            Vector3 hitPoint = hit.point;
+            int closestVertexIndex = FindClosestVertex(hitPoint);
+
+            // Applique la dÃ©formation selon le mode sÃ©lectionnÃ©
+            if (useBrushMode)
+            {
+                ApplyBrushDeformation(closestVertexIndex); // DÃ©formation avec brush
+            }
+            else
+            {
+                ApplyPatternDeformation(closestVertexIndex); // DÃ©formation avec pattern
+            }
+            RecalculateMesh(); // Recalcule le mesh pour appliquer la dÃ©formation
+        }
     }
 
-    // ---Fonctions de gestion du terrain---
+    void ApplyPatternDeformation(int closestVertexIndex)
+    {
+        for (int v = 0; v < modifiedVerts.Length; v++)
+        {
+            Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
 
+            // VÃ©rifie que le vertex est dans le rayon du pattern
+            if (distance.sqrMagnitude < radius * radius)
+            {
+                float normalizedDistance = distance.magnitude / radius;
+                float force = deformationStrength * attenuationCurve.Evaluate(normalizedDistance);
+
+                // Applique la dÃ©formation en fonction de la touche de la souris et du contrÃ´le
+                if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
+                {
+                    modifiedVerts[v] += Vector3.down * force;
+                }
+                else if (Input.GetMouseButtonDown(0))
+                {
+                    modifiedVerts[v] += Vector3.up * force;
+                }
+            }
+        }
+    }
+
+    void ApplyBrushDeformation(int closestVertexIndex)
+    {
+        Texture2D currentBrush = brushTextures[brushIndex];
+        int brushSize = currentBrush.width;
+
+        for (int v = 0; v < modifiedVerts.Length; v++)
+        {
+            Vector3 distance = modifiedVerts[v] - modifiedVerts[closestVertexIndex];
+
+            if (distance.sqrMagnitude < radius * radius)
+            {
+                float normalizedDistance = distance.magnitude / radius;
+
+                // Calcul des coordonnÃ©es dans la texture
+                int pixelX = Mathf.FloorToInt((distance.x / radius + 0.5f) * brushSize);
+                int pixelY = Mathf.FloorToInt((distance.z / radius + 0.5f) * brushSize);
+
+                // VÃ©rifie si les coordonnÃ©es sont dans les limites de la texture
+                if (pixelX >= 0 && pixelX < brushSize && pixelY >= 0 && pixelY < brushSize)
+                {
+                    float pixelIntensity = currentBrush.GetPixel(pixelX, pixelY).r;
+                    float force = deformationStrength * pixelIntensity;
+
+                    if (Input.GetMouseButtonDown(0) && Input.GetKey(KeyCode.LeftControl))
+                    {
+                        modifiedVerts[v] += Vector3.down * force;
+                    }
+                    else if (Input.GetMouseButtonDown(0))
+                    {
+                        modifiedVerts[v] += Vector3.up * force;
+                    }
+                }
+            }
+        }
+    }
+
+    void HandleBrushSwitch()
+    {
+        if (Input.GetKeyDown(KeyCode.B) && useBrushMode)
+        {
+            brushIndex = (brushIndex + 1) % brushTextures.Count;
+            Debug.Log("Brush changÃ© : " + brushIndex);
+        }
+    }
+
+    void ToggleDeformationMode()
+    {
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            useBrushMode = !useBrushMode;
+            Debug.Log(useBrushMode ? "Mode brush activÃ©" : "Mode pattern activÃ©");
+        }
+    }
+
+
+
+    int FindClosestVertex(Vector3 point)
+    {
+        int closestIndex = 0;
+        float closestDistance = float.MaxValue;
+
+        for (int i = 0; i < modifiedVerts.Length; i++)
+        {
+            float distance = (modifiedVerts[i] - point).sqrMagnitude;
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+        return closestIndex;
+    }
+
+    void RecalculateMesh()
+    {
+        p_mesh.vertices = modifiedVerts;
+        GetComponentInChildren<MeshCollider>().sharedMesh = p_mesh;
+        p_mesh.RecalculateNormals();
+    }
+
+    // MÃ©thode pour crÃ©er le terrain
     void CreerTerrain()
     {
         // Initialisation du mesh
@@ -71,12 +217,12 @@ public class TerrainTerrainController : MonoBehaviour
         p_normals = new Vector3[p_vertices.Length];
         p_triangles = new int[3 * 2 * (resolution - 1) * (resolution - 1)];
 
-        // Récupération des composants MeshFilter et MeshCollider
+        // RÃ©cupÃ©ration des composants MeshFilter et MeshCollider
         p_meshFilter = GetComponent<MeshFilter>();
         p_meshCollider = GetComponent<MeshCollider>();
 
         int indice_vertex = 0;
-        // Boucle pour définir les vertices et les normales
+        // Boucle pour dÃ©finir les vertices et les normales
         for (int j = 0; j < resolution; j++)
         {
             for (int i = 0; i < resolution; i++)
@@ -87,7 +233,7 @@ public class TerrainTerrainController : MonoBehaviour
             }
         }
 
-        // Centrer le pivot si nécessaire
+        // Centrer le pivot si nÃ©cessaire
         if (CentrerPivot)
         {
             Vector3 decalCentrage = new Vector3(dimension / 2, 0, dimension / 2);
@@ -96,7 +242,7 @@ public class TerrainTerrainController : MonoBehaviour
         }
 
         int indice_triangle = 0;
-        // Boucle pour définir les triangles
+        // Boucle pour dÃ©finir les triangles
         for (int j = 0; j < resolution - 1; j++)
         {
             for (int i = 0; i < resolution - 1; i++)
@@ -121,15 +267,19 @@ public class TerrainTerrainController : MonoBehaviour
         p_meshFilter.mesh = p_mesh;
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
+        p_mesh = GetComponentInChildren<MeshFilter>().mesh;
+        vertices = p_mesh.vertices;
+        modifiedVerts = p_mesh.vertices;
+
     }
 
     void HandleTerrainRotation()
     {
-        // Rotation de l'objet si la touche RightControl est enfoncée
+        // Rotation de l'objet si la touche RightControl est enfoncÃ©e
         if (Input.GetKeyDown(KeyCode.RightControl))
         {
             IsInRotMode = !IsInRotMode;
-            Debug.Log(IsInRotMode ? "Rotation activé" : "Rotation désactivé");
+            Debug.Log(IsInRotMode ? "Rotation activÃ©" : "Rotation dÃ©sactivÃ©");
         }
 
         if (IsInRotMode)
@@ -150,7 +300,7 @@ public class TerrainTerrainController : MonoBehaviour
 
     void HandleCharacterSpawn()
     {
-        // Activer le prefab capsule si la touche F2 est enfoncée
+        // Activer le prefab capsule si la touche F2 est enfoncÃ©e
         if (Input.GetKeyDown(KeyCode.F2))
         {
             IsCharacterActive = !IsCharacterActive;
@@ -163,31 +313,31 @@ public class TerrainTerrainController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F))
         {
             currentDistanceType = (DistanceType)(((int)currentDistanceType + 1) % 3);
-            Debug.Log("Distance type pour le vertex le plus proche changé: " + currentDistanceType);
+            Debug.Log("Distance type pour le vertex le plus proche changï¿½: " + currentDistanceType);
         }
 
         if (Input.GetKeyDown(KeyCode.V))
         {
             neighborDistanceType = (DistanceType)(((int)neighborDistanceType + 1) % 3);
-            Debug.Log("Distance type pour la recherche des voisins changé: " + neighborDistanceType);
+            Debug.Log("Distance type pour la recherche des voisins changï¿½: " + neighborDistanceType);
         }
 
         if (Input.GetKeyDown(KeyCode.T))
         {
             useApproximation = !useApproximation;
-            Debug.Log(useApproximation ? "Approximation activée" : "Approximation désactivée");
+            Debug.Log(useApproximation ? "Approximation activï¿½e" : "Approximation dï¿½sactivï¿½e");
         }
 
         if (Input.GetKeyDown(KeyCode.N))
         {
             recalculateSelectiveNormals = !recalculateSelectiveNormals;
-            Debug.Log(recalculateSelectiveNormals ? "Recalcul sélectif des normales activé" : "Recalcul global des normales activé");
+            Debug.Log(recalculateSelectiveNormals ? "Recalcul sï¿½lectif des normales activï¿½" : "Recalcul global des normales activï¿½");
         }
 
         if (Input.GetKeyDown(KeyCode.R))
         {
             useGridSpaceForNeighbors = !useGridSpaceForNeighbors;
-            Debug.Log(useGridSpaceForNeighbors ? "Mode grille activé pour le voisinage" : "Mode monde activé pour le voisinage");
+            Debug.Log(useGridSpaceForNeighbors ? "Mode grille activï¿½ pour le voisinage" : "Mode monde activï¿½ pour le voisinage");
         }
 
         RaycastHit hit;
@@ -216,7 +366,7 @@ public class TerrainTerrainController : MonoBehaviour
             {
                 float distanceToVertex = CalculateDistance(modifiedVerts[v], modifiedVerts[closestVertexIndex], neighborDistanceType, useGridSpaceForNeighbors);
 
-                // Vérifier que le vertex est dans le rayon
+                // Vï¿½rifier que le vertex est dans le rayon
                 if (distanceToVertex < radius)
                 {
                     float normalizedDistance = distanceToVertex / radius;
@@ -245,33 +395,48 @@ public class TerrainTerrainController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.RightAlt))
         {
-            deformationStrength = Mathf.Min(deformationStrength + 0.1f, 5f);
+            deformationStrength = Mathf.Min(deformationStrength + 1f, 50f);
         }
 
         else if (Input.GetKeyDown(KeyCode.LeftAlt))
         {
-            deformationStrength = Mathf.Max(deformationStrength - 0.1f, 0.5f);
+            deformationStrength = Mathf.Max(deformationStrength - 1f, 1f);
         }
     }
     void HandlePatternRadius()
     {
         if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.Plus)) // Augmente le rayon
         {
-            radius = Mathf.Min(radius + 0.5f, 5f); // Limite max
+            radius = Mathf.Min(radius + 1f, 50f); // Limite max
         }
         else if (Input.GetKeyDown(KeyCode.Minus)) // Diminue le rayon
         {
-            radius = Mathf.Max(radius - 0.5f, 1.5f); // Limite min
+            radius = Mathf.Max(radius - 1f, 1f); // Limite min
         }
     }
 
     void HandlePatternSwitch()
     {
-        if (Input.GetKeyDown(KeyCode.P))
+        if (Input.GetKeyDown(KeyCode.P) && !useBrushMode)
         {
             patternIndex = (patternIndex + 1) % patterns.Count;
-            attenuationCurve = patterns[patternIndex]; // Applique le nouveau pattern
-            Debug.Log("Pattern changé: " + patternIndex);
+            attenuationCurve = patterns[patternIndex];
+            Debug.Log("Pattern changÃ© : " + patternIndex);
+        }
+    }
+
+    void ActivationCanvas()
+    {
+        // Ouvrir/fermer le menu des paramÃ¨tres avec F10
+        if (Input.GetKeyDown(KeyCode.F10))
+        {
+            settingsCanvas.SetActive(!settingsCanvas.activeSelf);
+        }
+
+        // Appliquer les paramÃ¨tres et recrÃ©er le terrain quand Enter est pressÃ©
+        if (Input.GetKeyDown(KeyCode.Return) && settingsCanvas.activeSelf)
+        {
+            ApplySettings();
         }
     }
 
@@ -298,7 +463,7 @@ public class TerrainTerrainController : MonoBehaviour
     {
         if (useGridSpace)
         {
-            // Calcul de la distance en utilisant les coordonnées de grille
+            // Calcul de la distance en utilisant les coordonnï¿½es de grille
             Vector2 gridPointA = new Vector2(Mathf.Round(pointA.x), Mathf.Round(pointA.z));
             Vector2 gridPointB = new Vector2(Mathf.Round(pointB.x), Mathf.Round(pointB.z));
 
@@ -327,13 +492,13 @@ public class TerrainTerrainController : MonoBehaviour
         }
     }
 
-    // Modification de FindClosestVertex pour accepter un type de distance en paramètre (Phase 1)
+    // Modification de FindClosestVertex pour accepter un type de distance en paramï¿½tre (Phase 1)
     int FindClosestVertex(Vector3 point, DistanceType distanceType)
     {
         int closestIndex = -1;
         float closestDistance = Mathf.Infinity;
 
-        // Parcours des vertices du triangle sélectionné
+        // Parcours des vertices du triangle sï¿½lectionnï¿½
         for (int i = 0; i < modifiedVerts.Length; i++)
         {
             float distance = CalculateDistance(point, modifiedVerts[i], distanceType, useGridSpaceForNeighbors);
@@ -349,10 +514,10 @@ public class TerrainTerrainController : MonoBehaviour
 
     int FindClosestVertexApproximation(int triangleIndex)
     {
-        // On obtient les indices des sommets du triangle touché
+        // On obtient les indices des sommets du triangle touchï¿½
         int vert1 = p_triangles[triangleIndex * 3];
 
-        // On retourne simplement le premier sommet du triangle sélectionné comme approximation
+        // On retourne simplement le premier sommet du triangle sï¿½lectionnï¿½ comme approximation
         return vert1;
     }
 
@@ -362,17 +527,17 @@ public class TerrainTerrainController : MonoBehaviour
     {
         Vector3[] normals = p_mesh.normals;
 
-        // Boucle sur les sommets modifiés pour recalculer leurs normales
+        // Boucle sur les sommets modifiï¿½s pour recalculer leurs normales
         for (int v = 0; v < modifiedVerts.Length; v++)
         {
-            if (modifiedVerts[v] != vertices[v]) // Si le sommet a été modifié
+            if (modifiedVerts[v] != vertices[v]) // Si le sommet a ï¿½tï¿½ modifiï¿½
             {
                 normals[v] = Vector3.zero;
 
                 // Calcul de la normale en fonction des triangles adjacents
                 foreach (int t in p_mesh.triangles)
                 {
-                    // Calcule la normale du triangle si le sommet appartient à ce triangle
+                    // Calcule la normale du triangle si le sommet appartient ï¿½ ce triangle
                     // (Note : Ajoutez ici la logique pour trouver les triangles auxquels le sommet appartient)
                 }
             }
@@ -388,4 +553,18 @@ public class TerrainTerrainController : MonoBehaviour
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
     }
 
+    public void ApplySettings()
+    {
+        if (int.TryParse(dimensionInput.text, out int newDimension) && int.TryParse(resolutionInput.text, out int newResolution))
+        {
+            dimension = newDimension;
+            resolution = newResolution;
+            CreerTerrain();  // RecrÃ©er le terrain avec les nouvelles valeurs
+            settingsCanvas.SetActive(false);  // Fermer le menu des paramÃ¨tres
+        }
+        else
+        {
+            Debug.LogWarning("EntrÃ©e invalide pour la dimension ou la rÃ©solution.");
+        }
+    }
 }
