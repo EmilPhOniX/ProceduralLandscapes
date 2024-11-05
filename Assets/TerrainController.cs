@@ -27,6 +27,10 @@ public class TerrainTerrainController : MonoBehaviour
     private Vector3[] vertices, modifiedVerts;
     public List<AnimationCurve> patterns; // Liste des patterns
     private int patternIndex = 0; // Indice du pattern actuel
+    private bool useApproximation = false; // Active ou désactive l'approximation
+    private bool recalculateSelectiveNormals = false;
+    private bool isDeforming = false;
+    private bool useGridSpaceForNeighbors = true;
 
     enum DistanceType { Euclidean, Manhattan, Chebyshev }
     private DistanceType currentDistanceType = DistanceType.Euclidean;
@@ -168,6 +172,24 @@ public class TerrainTerrainController : MonoBehaviour
             Debug.Log("Distance type pour la recherche des voisins changé: " + neighborDistanceType);
         }
 
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            useApproximation = !useApproximation;
+            Debug.Log(useApproximation ? "Approximation activée" : "Approximation désactivée");
+        }
+
+        if (Input.GetKeyDown(KeyCode.N))
+        {
+            recalculateSelectiveNormals = !recalculateSelectiveNormals;
+            Debug.Log(recalculateSelectiveNormals ? "Recalcul sélectif des normales activé" : "Recalcul global des normales activé");
+        }
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            useGridSpaceForNeighbors = !useGridSpaceForNeighbors;
+            Debug.Log(useGridSpaceForNeighbors ? "Mode grille activé pour le voisinage" : "Mode monde activé pour le voisinage");
+        }
+
         RaycastHit hit;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
@@ -175,11 +197,24 @@ public class TerrainTerrainController : MonoBehaviour
         {
             Vector3 hitPoint = hit.point;
 
-            int closestVertexIndex = FindClosestVertex(hitPoint, currentDistanceType);
+            int closestVertexIndex;
+            if (useApproximation)
+            {
+                closestVertexIndex = FindClosestVertexApproximation(hit.triangleIndex);
+            }
+            else
+            {
+                closestVertexIndex = FindClosestVertex(hitPoint, currentDistanceType);
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                isDeforming = true;
+            }
 
             for (int v = 0; v < modifiedVerts.Length; v++)
             {
-                float distanceToVertex = CalculateDistance(modifiedVerts[v], modifiedVerts[closestVertexIndex], neighborDistanceType);
+                float distanceToVertex = CalculateDistance(modifiedVerts[v], modifiedVerts[closestVertexIndex], neighborDistanceType, useGridSpaceForNeighbors);
 
                 // Vérifier que le vertex est dans le rayon
                 if (distanceToVertex < radius)
@@ -198,6 +233,11 @@ public class TerrainTerrainController : MonoBehaviour
                 }
             }
             RecalculateMesh();
+        }
+        if (Input.GetMouseButtonUp(0) && isDeforming)
+        {
+            isDeforming = false;
+            UpdateMeshCollider();
         }
     }
 
@@ -240,20 +280,50 @@ public class TerrainTerrainController : MonoBehaviour
     void RecalculateMesh()
     {
         p_mesh.vertices = modifiedVerts;
-        GetComponentInChildren<MeshCollider>().sharedMesh = p_mesh;
-        p_mesh.RecalculateNormals();
+
+        if (recalculateSelectiveNormals)
+        {
+            RecalculateNormalsSelective();
+        }
+        else
+        {
+            p_mesh.RecalculateNormals();
+        }
     }
 
-    float CalculateDistance(Vector3 pointA, Vector3 pointB, DistanceType distanceType)
+    // Exercice 5
+    // Phase 1
+
+    float CalculateDistance(Vector3 pointA, Vector3 pointB, DistanceType distanceType, bool useGridSpace)
     {
-        switch (distanceType)
+        if (useGridSpace)
         {
-            case DistanceType.Manhattan:
-                return Mathf.Abs(pointA.x - pointB.x) + Mathf.Abs(pointA.y - pointB.y) + Mathf.Abs(pointA.z - pointB.z);
-            case DistanceType.Chebyshev:
-                return Mathf.Max(Mathf.Abs(pointA.x - pointB.x), Mathf.Abs(pointA.y - pointB.y), Mathf.Abs(pointA.z - pointB.z));
-            default:
-                return Vector3.Distance(pointA, pointB);
+            // Calcul de la distance en utilisant les coordonnées de grille
+            Vector2 gridPointA = new Vector2(Mathf.Round(pointA.x), Mathf.Round(pointA.z));
+            Vector2 gridPointB = new Vector2(Mathf.Round(pointB.x), Mathf.Round(pointB.z));
+
+            switch (distanceType)
+            {
+                case DistanceType.Manhattan:
+                    return Mathf.Abs(gridPointA.x - gridPointB.x) + Mathf.Abs(gridPointA.y - gridPointB.y);
+                case DistanceType.Chebyshev:
+                    return Mathf.Max(Mathf.Abs(gridPointA.x - gridPointB.x), Mathf.Abs(gridPointA.y - gridPointB.y));
+                default:
+                    return Vector2.Distance(gridPointA, gridPointB);
+            }
+        }
+        else
+        {
+            // Calcul de la distance en utilisant les positions en espace monde
+            switch (distanceType)
+            {
+                case DistanceType.Manhattan:
+                    return Mathf.Abs(pointA.x - pointB.x) + Mathf.Abs(pointA.y - pointB.y) + Mathf.Abs(pointA.z - pointB.z);
+                case DistanceType.Chebyshev:
+                    return Mathf.Max(Mathf.Abs(pointA.x - pointB.x), Mathf.Abs(pointA.y - pointB.y), Mathf.Abs(pointA.z - pointB.z));
+                default: // Euclidean
+                    return Vector3.Distance(pointA, pointB);
+            }
         }
     }
 
@@ -266,7 +336,7 @@ public class TerrainTerrainController : MonoBehaviour
         // Parcours des vertices du triangle sélectionné
         for (int i = 0; i < modifiedVerts.Length; i++)
         {
-            float distance = CalculateDistance(point, modifiedVerts[i], distanceType);
+            float distance = CalculateDistance(point, modifiedVerts[i], distanceType, useGridSpaceForNeighbors);
 
             if (distance < closestDistance)
             {
@@ -276,4 +346,46 @@ public class TerrainTerrainController : MonoBehaviour
         }
         return closestIndex;
     }
+
+    int FindClosestVertexApproximation(int triangleIndex)
+    {
+        // On obtient les indices des sommets du triangle touché
+        int vert1 = p_triangles[triangleIndex * 3];
+
+        // On retourne simplement le premier sommet du triangle sélectionné comme approximation
+        return vert1;
+    }
+
+    // Phase 4
+
+    void RecalculateNormalsSelective()
+    {
+        Vector3[] normals = p_mesh.normals;
+
+        // Boucle sur les sommets modifiés pour recalculer leurs normales
+        for (int v = 0; v < modifiedVerts.Length; v++)
+        {
+            if (modifiedVerts[v] != vertices[v]) // Si le sommet a été modifié
+            {
+                normals[v] = Vector3.zero;
+
+                // Calcul de la normale en fonction des triangles adjacents
+                foreach (int t in p_mesh.triangles)
+                {
+                    // Calcule la normale du triangle si le sommet appartient à ce triangle
+                    // (Note : Ajoutez ici la logique pour trouver les triangles auxquels le sommet appartient)
+                }
+            }
+        }
+
+        p_mesh.normals = normals;
+        p_mesh.RecalculateBounds();
+    }
+
+    void UpdateMeshCollider()
+    {
+        p_meshCollider.sharedMesh = null;
+        p_meshCollider.sharedMesh = p_meshFilter.mesh;
+    }
+
 }
