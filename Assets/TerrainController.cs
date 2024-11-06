@@ -18,10 +18,13 @@ public class TerrainController : MonoBehaviour
     public int resolution;
     private MeshRenderer p_meshRenderer;
     public GameObject capsulePrefab;
+    public GameObject terrainPrefab;
+    public int extensionSize = 300;
     public int vitesse = 0;
     private int angle = 0;
     private bool IsInRotMode = false;
     private bool IsCharacterActive = false;
+
     // Variables pour la gestion de l'interface utilisateur (UI)
     public GameObject settingsCanvas;  // Interface pour le menu des paramètres
     public InputField dimensionInput;  // Champ de saisie pour la dimension
@@ -41,7 +44,7 @@ public class TerrainController : MonoBehaviour
     private Vector3[] vertices, modifiedVerts;
     public List<AnimationCurve> patterns; // Liste des patterns
     private int patternIndex = 0; // Indice du pattern actuel
-    private bool useApproximation = false; // Active ou d�sactive l'approximation
+    private bool useApproximation = false; // Active ou d sactive l'approximation
     private bool recalculateSelectiveNormals = false;
     private bool isDeforming = false;
     private bool useGridSpaceForNeighbors = true;
@@ -86,6 +89,32 @@ public class TerrainController : MonoBehaviour
         {
             ToggleInfoPanel();
         }
+
+        if (Input.GetKey(KeyCode.F5))
+        {
+            if (Input.GetKeyDown(KeyCode.UpArrow))
+            {
+                AddTerrainExtension(Vector3.forward);
+            }
+            else if (Input.GetKeyDown(KeyCode.DownArrow))
+            {
+                AddTerrainExtension(Vector3.back);
+            }
+            else if (Input.GetKeyDown(KeyCode.LeftArrow))
+            {
+                AddTerrainExtension(Vector3.left);
+            }
+            else if (Input.GetKeyDown(KeyCode.RightArrow))
+            {
+                AddTerrainExtension(Vector3.right);
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            HighlightTerrainChunks();
+        }
+
     }
 
     // Implémentation F1
@@ -426,6 +455,69 @@ public class TerrainController : MonoBehaviour
 
     }
 
+    // Ajout d'une extension de terrain
+    void AddTerrainExtension(Vector3 direction)
+    {
+        // Utilisation de la dimension réelle pour positionner précisément le chunk suivant
+        Vector3 spawnPosition = transform.position + direction * (dimension * (resolution - 1) / (float)resolution);
+        GameObject newTerrain = Instantiate(terrainPrefab, spawnPosition, Quaternion.identity);
+        TerrainController newTerrainGenerator = newTerrain.GetComponent<TerrainController>();
+
+        newTerrainGenerator.dimension = dimension;
+        newTerrainGenerator.resolution = resolution;
+        newTerrainGenerator.CreerTerrain();
+
+        // Aligner les bords du nouveau chunk avec le chunk voisin
+        AlignEdgesWithNeighbor(newTerrainGenerator, direction);
+    }
+
+    // Alignement des bords pour continuité entre chunks
+    void AlignEdgesWithNeighbor(TerrainController newTerrain, Vector3 direction)
+    {
+        Vector3[] newVertices = newTerrain.p_mesh.vertices;
+
+        if (direction == Vector3.forward) // Alignement nord
+        {
+            for (int i = 0; i < resolution; i++)
+            {
+                newVertices[i] = p_vertices[(resolution - 1) * resolution + i]; // Copier le bord sud de l'ancien terrain
+            }
+        }
+        else if (direction == Vector3.back) // Alignement sud
+        {
+            for (int i = 0; i < resolution; i++)
+            {
+                newVertices[(resolution - 1) * resolution + i] = p_vertices[i]; // Copier le bord nord de l'ancien terrain
+            }
+        }
+        else if (direction == Vector3.left) // Alignement ouest
+        {
+            for (int i = 0; i < resolution; i++)
+            {
+                newVertices[i * resolution + (resolution - 1)] = p_vertices[i * resolution]; // Copier le bord est de l'ancien terrain
+            }
+        }
+        else if (direction == Vector3.right) // Alignement est
+        {
+            for (int i = 0; i < resolution; i++)
+            {
+                newVertices[i * resolution] = p_vertices[i * resolution + (resolution - 1)]; // Copier le bord ouest de l'ancien terrain
+            }
+        }
+
+        newTerrain.p_mesh.vertices = newVertices;
+        newTerrain.p_mesh.RecalculateNormals();
+        newTerrain.p_meshCollider.sharedMesh = newTerrain.p_meshFilter.mesh;
+    }
+
+
+    void HighlightTerrainChunks()
+    {
+
+    }
+
+
+
     void HandleTerrainRotation()
     {
         // Rotation de l'objet si la touche RightControl est enfoncée
@@ -471,31 +563,31 @@ public class TerrainController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F))
         {
             currentDistanceType = (DistanceType)(((int)currentDistanceType + 1) % 3);
-            Debug.Log("Distance type pour le vertex le plus proche chang�: " + currentDistanceType);
+            Debug.Log("Distance type pour le vertex le plus proche chang : " + currentDistanceType);
         }
 
         if (Input.GetKeyDown(KeyCode.V))
         {
             neighborDistanceType = (DistanceType)(((int)neighborDistanceType + 1) % 3);
-            Debug.Log("Distance type pour la recherche des voisins chang�: " + neighborDistanceType);
+            Debug.Log("Distance type pour la recherche des voisins chang : " + neighborDistanceType);
         }
 
         if (Input.GetKeyDown(KeyCode.T))
         {
             useApproximation = !useApproximation;
-            Debug.Log(useApproximation ? "Approximation activ�e" : "Approximation d�sactiv�e");
+            Debug.Log(useApproximation ? "Approximation activ e" : "Approximation d sactiv e");
         }
 
         if (Input.GetKeyDown(KeyCode.N))
         {
             recalculateSelectiveNormals = !recalculateSelectiveNormals;
-            Debug.Log(recalculateSelectiveNormals ? "Recalcul s�lectif des normales activ�" : "Recalcul global des normales activ�");
+            Debug.Log(recalculateSelectiveNormals ? "Recalcul s lectif des normales activ " : "Recalcul global des normales activ ");
         }
 
         if (Input.GetKeyDown(KeyCode.R))
         {
             useGridSpaceForNeighbors = !useGridSpaceForNeighbors;
-            Debug.Log(useGridSpaceForNeighbors ? "Mode grille activ� pour le voisinage" : "Mode monde activ� pour le voisinage");
+            Debug.Log(useGridSpaceForNeighbors ? "Mode grille activ  pour le voisinage" : "Mode monde activ  pour le voisinage");
         }
 
         RaycastHit hit;
@@ -524,7 +616,7 @@ public class TerrainController : MonoBehaviour
             {
                 float distanceToVertex = CalculateDistance(modifiedVerts[v], modifiedVerts[closestVertexIndex], neighborDistanceType, useGridSpaceForNeighbors);
 
-                // V�rifier que le vertex est dans le rayon
+                // V rifier que le vertex est dans le rayon
                 if (distanceToVertex < radius)
                 {
                     float normalizedDistance = distanceToVertex / radius;
@@ -621,7 +713,7 @@ public class TerrainController : MonoBehaviour
     {
         if (useGridSpace)
         {
-            // Calcul de la distance en utilisant les coordonn�es de grille
+            // Calcul de la distance en utilisant les coordonn es de grille
             Vector2 gridPointA = new Vector2(Mathf.Round(pointA.x), Mathf.Round(pointA.z));
             Vector2 gridPointB = new Vector2(Mathf.Round(pointB.x), Mathf.Round(pointB.z));
 
@@ -650,13 +742,13 @@ public class TerrainController : MonoBehaviour
         }
     }
 
-    // Modification de FindClosestVertex pour accepter un type de distance en param�tre (Phase 1)
+    // Modification de FindClosestVertex pour accepter un type de distance en param tre (Phase 1)
     int FindClosestVertex(Vector3 point, DistanceType distanceType)
     {
         int closestIndex = -1;
         float closestDistance = Mathf.Infinity;
 
-        // Parcours des vertices du triangle s�lectionn�
+        // Parcours des vertices du triangle s lectionn 
         for (int i = 0; i < modifiedVerts.Length; i++)
         {
             float distance = CalculateDistance(point, modifiedVerts[i], distanceType, useGridSpaceForNeighbors);
@@ -672,10 +764,10 @@ public class TerrainController : MonoBehaviour
 
     int FindClosestVertexApproximation(int triangleIndex)
     {
-        // On obtient les indices des sommets du triangle touch�
+        // On obtient les indices des sommets du triangle touch 
         int vert1 = p_triangles[triangleIndex * 3];
 
-        // On retourne simplement le premier sommet du triangle s�lectionn� comme approximation
+        // On retourne simplement le premier sommet du triangle s lectionn  comme approximation
         return vert1;
     }
 
@@ -685,17 +777,17 @@ public class TerrainController : MonoBehaviour
     {
         Vector3[] normals = p_mesh.normals;
 
-        // Boucle sur les sommets modifi�s pour recalculer leurs normales
+        // Boucle sur les sommets modifi s pour recalculer leurs normales
         for (int v = 0; v < modifiedVerts.Length; v++)
         {
-            if (modifiedVerts[v] != vertices[v]) // Si le sommet a �t� modifi�
+            if (modifiedVerts[v] != vertices[v]) // Si le sommet a  t  modifi 
             {
                 normals[v] = Vector3.zero;
 
                 // Calcul de la normale en fonction des triangles adjacents
                 foreach (int t in p_mesh.triangles)
                 {
-                    // Calcule la normale du triangle si le sommet appartient � ce triangle
+                    // Calcule la normale du triangle si le sommet appartient   ce triangle
                     // (Note : Ajoutez ici la logique pour trouver les triangles auxquels le sommet appartient)
                 }
             }
