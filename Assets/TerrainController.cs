@@ -110,10 +110,6 @@ public class TerrainController : MonoBehaviour
             }
         }
 
-        if (Input.GetKeyDown(KeyCode.M))
-        {
-            HighlightTerrainChunks();
-        }
 
     }
 
@@ -198,9 +194,6 @@ public class TerrainController : MonoBehaviour
         infoText2.text += "N - Activer/désactiver le recalcul sélectif des normales\n";
         infoText2.text += "R - Basculer entre le mode de voisinage grille et espace monde\n";
 
-
-        
-
         if (useBrushMode)
         {
             infoText2.text += "Déformation par Brush :\n";
@@ -221,7 +214,6 @@ public class TerrainController : MonoBehaviour
         infoText2.text += "Contrôles des Chunks :\n";
         infoText2.text += "F5 + flèches - Ajouter un Chunk dans une direction\n";
     }
-
 
     void HandleUndoRedo()
     {
@@ -258,6 +250,7 @@ public class TerrainController : MonoBehaviour
             UpdateMeshCollider();
         }
     }
+
     void SaveCurrentState()
     {
         undoStack.Push((Vector3[])modifiedVerts.Clone()); // Sauvegarde de l'état actuel pour Undo
@@ -430,7 +423,6 @@ public class TerrainController : MonoBehaviour
         p_mesh = GetComponentInChildren<MeshFilter>().mesh;
         vertices = p_mesh.vertices;
         modifiedVerts = p_mesh.vertices;
-
     }
 
     // Ajout d'une extension de terrain
@@ -487,14 +479,6 @@ public class TerrainController : MonoBehaviour
         newTerrain.p_mesh.RecalculateNormals();
         newTerrain.p_meshCollider.sharedMesh = newTerrain.p_meshFilter.mesh;
     }
-
-
-    void HighlightTerrainChunks()
-    {
-
-    }
-
-
 
     void HandleTerrainRotation()
     {
@@ -575,7 +559,7 @@ public class TerrainController : MonoBehaviour
         {
             Vector3 hitPoint = hit.point;
 
-            int closestVertexIndex;
+            int closestVertexIndex = FindClosestVertex(hitPoint);
             if (useApproximation)
             {
                 closestVertexIndex = FindClosestVertexApproximation(hit.triangleIndex);
@@ -584,6 +568,16 @@ public class TerrainController : MonoBehaviour
             {
                 closestVertexIndex = FindClosestVertex(hitPoint, currentDistanceType);
             }
+
+            if (useBrushMode)
+            {
+                ApplyBrushDeformation(closestVertexIndex); // Déformation avec brush
+            }
+            else
+            {
+                ApplyPatternDeformation(closestVertexIndex); // Déformation avec pattern
+            }
+
 
             if (Input.GetMouseButtonDown(0))
             {
@@ -631,6 +625,7 @@ public class TerrainController : MonoBehaviour
             deformationStrength = Mathf.Max(deformationStrength - 1f, 1f);
         }
     }
+
     void HandlePatternRadius()
     {
         if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.Plus)) // Augmente le rayon
@@ -669,7 +664,6 @@ public class TerrainController : MonoBehaviour
     }
 
     // ---Fonctions utilitaires---
-
     void RecalculateMesh()
     {
         p_mesh.vertices = modifiedVerts;
@@ -686,7 +680,6 @@ public class TerrainController : MonoBehaviour
 
     // Exercice 5
     // Phase 1
-
     float CalculateDistance(Vector3 pointA, Vector3 pointB, DistanceType distanceType, bool useGridSpace)
     {
         if (useGridSpace)
@@ -750,7 +743,6 @@ public class TerrainController : MonoBehaviour
     }
 
     // Phase 4
-
     void RecalculateNormalsSelective()
     {
         Vector3[] normals = p_mesh.normals;
@@ -780,7 +772,6 @@ public class TerrainController : MonoBehaviour
         p_meshCollider.sharedMesh = null;
         p_meshCollider.sharedMesh = p_meshFilter.mesh;
     }
-
     public void ApplySettings()
     {
         if (int.TryParse(dimensionInput.text, out int newDimension) && int.TryParse(resolutionInput.text, out int newResolution))
