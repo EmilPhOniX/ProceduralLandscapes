@@ -174,7 +174,7 @@ public class TerrainController : MonoBehaviour
         infoText.text += "Shift gauche - Déplacement rapide\n";
         infoText.text += "CTRL gauche - Déplacement lent\n\n";
 
-        infoText2.text += "Contrôles du Personnage :\n";
+        infoText2.text = "Contrôles du Personnage :\n";
         infoText2.text += "F2 - Activer le mode de déplacement vers une destination\n";
         infoText2.text += "F3 - Activer le mode libre\n";
         infoText2.text += "Échap - Quitter le mode libre\n";
@@ -198,34 +198,9 @@ public class TerrainController : MonoBehaviour
         infoText2.text += "N - Activer/désactiver le recalcul sélectif des normales\n";
         infoText2.text += "R - Basculer entre le mode de voisinage grille et espace monde\n";
 
-        /*// --- Chunks (Exercice 6) ---
-        infoText.text += "Informations des Chunks :\n";
-        infoText.text += $"Nombre de Chunks : {GetChunkCount()}\n";
-        infoText.text += $"Nombre total de Triangles : {GetTotalTriangles()}\n";
-        infoText.text += $"Nombre total de Sommets : {GetTotalVertices()}\n\n";
 
-        // Contrôles pour les Chunks
-        infoText.text += "Contrôles des Chunks :\n";
-        infoText.text += "F5 + flèches - Ajouter un Chunk dans une direction\n";
-        infoText.text += "M - Marquer les Chunks pendant 3 secondes\n";
+        
 
-        int GetChunkCount()
-        {
-            // Remplacez cette fonction par votre méthode de comptage des chunks
-            return 1; // Par exemple, changez avec la logique réelle de comptage des chunks
-        }
-
-        int GetTotalTriangles()
-        {
-            // Remplacez cette fonction par votre méthode de comptage des triangles
-            return p_mesh.triangles.Length / 3; // Exemple basé sur un seul chunk
-        }
-
-        int GetTotalVertices()
-        {
-            // Remplacez cette fonction par votre méthode de comptage des sommets
-            return p_mesh.vertices.Length; // Exemple basé sur un seul chunk
-        }*/
         if (useBrushMode)
         {
             infoText2.text += "Déformation par Brush :\n";
@@ -242,6 +217,9 @@ public class TerrainController : MonoBehaviour
         }
 
         infoText2.text += "\nC - Basculer entre les modes Brush et Pattern\n";
+        // Contrôles pour les Chunks
+        infoText2.text += "Contrôles des Chunks :\n";
+        infoText2.text += "F5 + flèches - Ajouter un Chunk dans une direction\n";
     }
 
 
